@@ -211,13 +211,21 @@
 
         <!-- Host Wheel -->
         <div id="host-wheel" class="screen">
-            <h2>¡Gira la Ruleta!</h2>
-            <div style="position: relative; width: 300px; margin: 0 auto;">
-                <div class="pointer"></div>
-                <canvas id="wheel-canvas" width="300" height="300"></canvas>
+            <h2>¡Gira las Ruletas!</h2>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                <div style="position: relative; width: 300px;">
+                    <h3>Jugador</h3>
+                    <div class="pointer"></div>
+                    <canvas id="wheel-canvas-names" width="300" height="300"></canvas>
+                </div>
+                <div style="position: relative; width: 300px;">
+                    <h3>Desafío</h3>
+                    <div class="pointer"></div>
+                    <canvas id="wheel-canvas-actions" width="300" height="300"></canvas>
+                </div>
             </div>
             <br>
-            <button id="spin-btn" onclick="spinWheel()">GIRAR</button>
+            <button id="spin-btn" onclick="spinBothWheels()">GIRAR AMBAS</button>
         </div>
 
         <!-- Host Scoring -->
@@ -285,8 +293,28 @@
         // Game State
         let players = []; // List of names
         let currentTarget = "";
+        let currentChallenge = "";
         let votes = {}; // { playerName: votedName }
-        let chaosChallenges = ["Canta un Villancico", "Haz un Baile", "Cuenta un Chiste"];
+        let challenges = [
+            { title: "Clásico", desc: "Abre tu regalo normalmente." },
+            { title: "Zona Segura", desc: "¡Sin desafío! Abre tranquilo." },
+            { title: "Speed Run", desc: "Ábrelo lo más rápido posible." },
+            { title: "Manoplas", desc: "Usa manoplas de cocina para abrirlo." },
+            { title: "Brazos T-Rex", desc: "Codos pegados a las costillas." },
+            { title: "Una Mano", desc: "Una mano detrás de la espalda." },
+            { title: "Sin Pulgares", desc: "Pega tus pulgares a tus índices." },
+            { title: "La Garra", desc: "Solo usa meñique y anular." },
+            { title: "Codos", desc: "Intenta rasgar el papel solo con los codos." },
+            { title: "Cantando", desc: "Canta un villancico mientras abres." },
+            { title: "Cámara Lenta", desc: "Abre en cámara lenta dramática." },
+            { title: "El Oscar", desc: "Da un discurso de aceptación llorando." },
+            { title: "Efectos Sonido", desc: "Haz efectos de sonido para cada movimiento." },
+            { title: "Noche de Paz", desc: "Abre sin hacer ni un solo ruido." },
+            { title: "Mayordomo", desc: "Elige a otro para que lo abra por ti." },
+            { title: "Titiritero", desc: "Otro usa sus manos, tú lo guías." },
+            { title: "Adivino", desc: "Adivina qué hay dentro antes de abrir." },
+            { title: "Paparazzi", desc: "Todos te toman fotos mientras abres." }
+        ];
         let remainingPlayers = [];
 
         // --- NAVIGATION ---
@@ -369,23 +397,24 @@
             players = connections.map(p => p.name);
             remainingPlayers = [...players];
             showScreen('host-wheel');
-            drawWheel();
+            drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
+            drawWheel('wheel-canvas-actions', challenges, rotationActions);
         }
 
         // Wheel Logic
-        let wheelCanvas = document.getElementById('wheel-canvas');
-        let ctx = wheelCanvas.getContext('2d');
-        let currentRotation = 0;
+        let rotationNames = 0;
+        let rotationActions = 0;
 
-        function drawWheel() {
-            const segments = [...remainingPlayers, ...chaosChallenges];
+        function drawWheel(canvasId, segments, rotation) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
             const arc = (2 * Math.PI) / segments.length;
             const colors = ['#D42426', '#165B33', '#F8B229', '#0B2E19'];
 
             ctx.clearRect(0, 0, 300, 300);
             ctx.save();
             ctx.translate(150, 150);
-            ctx.rotate(currentRotation);
+            ctx.rotate(rotation);
 
             segments.forEach((segment, i) => {
                 ctx.beginPath();
@@ -398,69 +427,80 @@
                 ctx.save();
                 ctx.rotate(i * arc + arc / 2);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
+                ctx.font = "bold 12px Arial";
                 ctx.textAlign = "right";
-                ctx.fillText(segment, 130, 5);
+                
+                let text = segment;
+                if (typeof segment === 'object' && segment.title) {
+                    text = segment.title;
+                }
+                
+                ctx.fillText(text, 130, 5);
                 ctx.restore();
             });
             ctx.restore();
         }
 
-        function spinWheel() {
-            const spinBtn = document.getElementById('spin-btn');
-            spinBtn.disabled = true;
-            
-            const segments = [...remainingPlayers, ...chaosChallenges];
-            // Random spin
-            const spinAngle = Math.random() * 10 + 10; // at least 10 radians
-            const duration = 4000;
-            let start = null;
-            const startRotation = currentRotation;
+        function spinBothWheels() {
+             document.getElementById('spin-btn').disabled = true;
+             
+             let finishedCount = 0;
+             
+             // Spin Names
+             spinSingleWheel('wheel-canvas-names', remainingPlayers, rotationNames, (finalRot, winner) => {
+                 rotationNames = finalRot;
+                 currentTarget = winner;
+                 finishedCount++;
+                 checkFinished();
+             });
+             
+             // Spin Actions
+             spinSingleWheel('wheel-canvas-actions', challenges, rotationActions, (finalRot, winner) => {
+                 rotationActions = finalRot;
+                 currentChallenge = winner;
+                 finishedCount++;
+                 checkFinished();
+             });
+             
+             function checkFinished() {
+                 if (finishedCount === 2) {
+                     setTimeout(() => {
+                         startVotingRound(currentTarget);
+                     }, 1000);
+                 }
+             }
+        }
 
+        function spinSingleWheel(canvasId, segments, startRotation, callback) {
+            const spinAngle = Math.random() * 10 + 10; 
+            const duration = 4000 + Math.random() * 1000; 
+            let start = null;
+            
             function animate(time) {
                 if (!start) start = time;
                 const elapsed = time - start;
                 
                 if (elapsed < duration) {
-                    // Ease out cubic
                     let t = elapsed / duration;
                     t--;
                     const ease = t * t * t + 1;
                     
-                    currentRotation = startRotation + spinAngle * ease;
-                    drawWheel();
+                    const currentRot = startRotation + spinAngle * ease;
+                    drawWheel(canvasId, segments, currentRot);
                     requestAnimationFrame(animate);
                 } else {
-                    currentRotation = startRotation + spinAngle;
-                    drawWheel();
-                    determineWinner(segments);
+                    const finalRot = startRotation + spinAngle;
+                    drawWheel(canvasId, segments, finalRot);
+                    
+                    // Calculate winner
+                    const actualRotation = finalRot % (2 * Math.PI);
+                    const arc = (2 * Math.PI) / segments.length;
+                    let index = Math.floor((2 * Math.PI - (actualRotation % (2 * Math.PI)) + 1.5 * Math.PI) / arc) % segments.length;
+                    
+                    callback(finalRot, segments[index]);
                 }
             }
             requestAnimationFrame(animate);
-        }
-
-        function determineWinner(segments) {
-            // Normalize rotation to 0-2PI
-            const actualRotation = currentRotation % (2 * Math.PI);
-            const arc = (2 * Math.PI) / segments.length;
-            
-            // The pointer is at the top (3*PI/2 or -PI/2 in canvas coords if 0 is right)
-            // But we rotated the canvas. 
-            // Let's simplify: The segment at the top is the one that covers 270 degrees (3PI/2) minus rotation
-            // Actually, simpler: Pointer is static at top.
-            // We need to find which segment is at -PI/2 (top).
-            
-            // Index = floor( ((2PI - (rotation % 2PI)) + offset) / arc ) % length
-            // Offset to align 0 with right, pointer is at 270deg (3PI/2)
-            
-            let index = Math.floor((2 * Math.PI - (actualRotation % (2 * Math.PI)) + 1.5 * Math.PI) / arc) % segments.length;
-            
-            const winner = segments[index];
-            currentTarget = winner;
-            
-            setTimeout(() => {
-                startVotingRound(winner);
-            }, 1000);
         }
 
         function startVotingRound(target) {
@@ -472,7 +512,7 @@
             broadcast({ 
                 type: 'VOTE_START', 
                 target: target, 
-                candidates: players.filter(p => p !== target) // Can't vote for self if target is player? Actually anyone can be target.
+                candidates: players.filter(p => p !== target) 
             });
             
             showScreen('host-scoring');
@@ -483,66 +523,29 @@
         }
 
         function revealAndScore() {
-            // Logic: 
-            // If target is a Chaos Challenge, no scoring, just fun.
-            // If target is a Player, check votes.
-            
-            const isChaos = chaosChallenges.includes(currentTarget);
-            let results = [];
-
-            if (isChaos) {
-                broadcast({ type: 'RESULT', title: '¡CAOS!', message: `Todos hagan: ${currentTarget}` });
-                document.getElementById('round-summary').innerHTML = `<h3>Desafío de Caos: ${currentTarget}</h3>`;
-            } else {
-                // Real scoring logic would go here (e.g. if they guessed who the secret santa is?)
-                // But the prompt implies "Spin ends on a Person" -> "Vote".
-                // Usually Secret Santa is pre-assigned. 
-                // This game seems to be "Guess who the wheel picked" or similar?
-                // Prompt says: "When spin ends on a Person... Listen for incoming VOTE... Show live count... Reveal & Score"
-                // Let's assume the game is "Guess who the wheel picked" (which is trivial since they see it?)
-                // OR, maybe the wheel is hidden from players?
-                // "Render a spinning wheel... When spin ends... send VOTE_START"
-                // Players see "VOTE_START". They don't see the wheel result?
-                // Ah, "Screen 2 (The Wheel): Render a spinning wheel... When spin ends... send data { type: 'VOTE_START', receiver: 'Name' }"
-                // Wait, if I send receiver 'Name', they know who it is.
-                // Maybe the goal is to guess something else?
-                // "Vote Screen: When receiving VOTE_START, show a dropdown of players. User selects one..."
-                // If the prompt implies the players DON'T know who the wheel landed on, then I shouldn't send the name.
-                // BUT the prompt says: "When spin ends on a Person, send data { type: 'VOTE_START', receiver: 'Name' }"
-                // Maybe 'receiver' is just internal?
-                // Let's assume the players DO NOT know who was picked.
-                // So I will send VOTE_START but NOT the target name to players.
-                
-                // RE-READING PROMPT: "When spin ends on a Person, send data { type: 'VOTE_START', receiver: 'Name' } to all connections."
-                // If I send it, they have it. Maybe the client hides it?
-                // Or maybe the game is "Who is the Secret Santa for [Name]?"
-                // Let's stick to a simple interpretation:
-                // Host spins. Wheel lands on "Alice".
-                // Host sends "VOTE_START".
-                // Players guess... who? Maybe they guess "Alice"?
-                // If the wheel is on the Host screen, and players are on phones, they might not see the screen.
-                // So the game is "Guess who the wheel picked".
-                
-                // Let's implement: Host knows target. Players guess target.
-                
-                connections.forEach(p => {
-                    const guess = votes[p.name];
-                    const correct = guess === currentTarget;
-                    if (correct) p.score += 10;
-                    p.conn.send({ 
-                        type: 'RESULT', 
-                        title: correct ? '¡Correcto!' : '¡Incorrecto!', 
-                        message: correct ? `¡Era ${currentTarget}!` : `Era ${currentTarget}, no ${guess}.`
-                    });
+            connections.forEach(p => {
+                const guess = votes[p.name];
+                const correct = guess === currentTarget;
+                if (correct) p.score += 10;
+                p.conn.send({ 
+                    type: 'RESULT', 
+                    title: correct ? '¡Correcto!' : '¡Incorrecto!', 
+                    message: correct ? `¡Era ${currentTarget}!` : `Era ${currentTarget}, no ${guess}.`
                 });
+            });
 
-                document.getElementById('round-summary').innerHTML = `<h3>El objetivo era: ${currentTarget}</h3>`;
-                
-                // Remove player from wheel if it was a person
-                if (!isChaos) {
-                    remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
-                }
+            let challengeDisplay = currentChallenge;
+            if (typeof currentChallenge === 'object') {
+                challengeDisplay = `<strong>${currentChallenge.title}</strong><br><span style="font-size: 1rem;">${currentChallenge.desc}</span>`;
             }
+
+            document.getElementById('round-summary').innerHTML = `
+                <h3>El objetivo era: ${currentTarget}</h3>
+                <p style="font-size: 1.5rem; color: var(--christmas-gold);">Desafío: ${challengeDisplay}</p>
+            `;
+            
+            // Remove player from wheel
+            remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
             
             showScreen('host-results');
         }
@@ -555,7 +558,8 @@
             }
             document.getElementById('spin-btn').disabled = false;
             showScreen('host-wheel');
-            drawWheel();
+            drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
+            drawWheel('wheel-canvas-actions', challenges, rotationActions);
         }
 
 
