@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiesta del Amigo Invisible</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --christmas-red: #D42426;
+            --christmas-green: #165B33;
+            --christmas-gold: #F8B229;
+            --snow-white: #F0F0F0;
+            --dark-green: #0B2E19;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-green);
+            color: var(--snow-white);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 2px solid var(--christmas-gold);
+            box-shadow: 0 0 20px rgba(248, 178, 41, 0.3);
+        }
+
+        h1, h2, h3 {
+            color: var(--christmas-gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        button {
+            background-color: var(--christmas-red);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.4);
+            background-color: #ff3336;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        input, select {
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid var(--christmas-gold);
+            background: rgba(255,255,255,0.9);
+            font-size: 1rem;
+            margin: 10px 0;
+            width: 80%;
+            color: var(--dark-green);
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Specific Screen Styles */
+        #role-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .big-btn {
+            font-size: 2rem;
+            padding: 40px;
+        }
+
+        #host-lobby ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #host-lobby li {
+            background: rgba(255,255,255,0.2);
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        #qrcode {
+            background: white;
+            padding: 10px;
+            display: inline-block;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        /* Wheel Styles */
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            border: 5px solid var(--christmas-gold);
+            overflow: hidden;
+            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .wheel-segment {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            transform-origin: 100% 100%;
+            left: 0;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 0.8rem;
+            /* Clip path to make pie slices - simplified for CSS only, JS will handle rotation */
+        }
+        
+        .pointer {
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid var(--christmas-red);
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .vote-count {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--christmas-gold);
+        }
+
+        .result-box {
+            background: var(--christmas-red);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .correct { background-color: var(--christmas-green); }
+        .wrong { background-color: var(--christmas-red); }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Role Selection -->
+        <div id="role-selection" class="screen active">
+            <h1>🎅 Fiesta del Amigo Invisible 🎄</h1>
+            <button class="big-btn" onclick="initHost()">CREAR PARTIDA</button>
+            <button class="big-btn" onclick="showJoinScreen()">UNIRSE A PARTIDA</button>
+        </div>
+
+        <!-- HOST SCREENS -->
+        
+        <!-- Host Lobby -->
+        <div id="host-lobby" class="screen">
+            <h2>Código de Sala: <span id="room-code-display" style="color: var(--christmas-gold); font-family: monospace; font-size: 2rem;">...</span></h2>
+            <div id="qrcode"></div>
+            <h3>Jugadores Unidos:</h3>
+            <ul id="player-list"></ul>
+            <button onclick="startGame()">Empezar Juego</button>
+        </div>
+
+        <!-- Host Wheel -->
+        <div id="host-wheel" class="screen">
+            <h2>¡Gira la Ruleta!</h2>
+            <div style="position: relative; width: 300px; margin: 0 auto;">
+                <div class="pointer"></div>
+                <canvas id="wheel-canvas" width="300" height="300"></canvas>
+            </div>
+            <br>
+            <button id="spin-btn" onclick="spinWheel()">GIRAR</button>
+        </div>
+
+        <!-- Host Scoring -->
+        <div id="host-scoring" class="screen">
+            <h2>Votación en Curso...</h2>
+            <p>Objetivo: <span id="target-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
+            <div class="vote-count" id="vote-count">0</div>
+            <p>Votos Recibidos</p>
+            <button onclick="revealAndScore()">Revelar y Puntuar</button>
+        </div>
+
+        <!-- Host Results -->
+        <div id="host-results" class="screen">
+            <h2>Resultados de la Ronda</h2>
+            <div id="round-summary"></div>
+            <button onclick="nextRound()">Siguiente Ronda</button>
+        </div>
+
+
+        <!-- PLAYER SCREENS -->
+
+        <!-- Player Join -->
+        <div id="player-join" class="screen">
+            <h2>Unirse a la Fiesta</h2>
+            <input type="text" id="player-name" placeholder="Tu Nombre" maxlength="12">
+            <input type="text" id="join-code" placeholder="Código de Sala" style="text-transform: uppercase;">
+            <button onclick="joinGame()">Unirse</button>
+            <p id="join-status"></p>
+        </div>
+
+        <!-- Player Wait -->
+        <div id="player-wait" class="screen">
+            <h2>Esperando...</h2>
+            <p>Esperando a que el anfitrión inicie la siguiente ronda.</p>
+            <div style="font-size: 3rem;">🎁</div>
+        </div>
+
+        <!-- Player Vote -->
+        <div id="player-vote" class="screen">
+            <h2>¿Quién es?</h2>
+            <p>La ruleta cayó en: <span id="vote-target" style="font-weight: bold;"></span></p>
+            <select id="vote-select">
+                <option value="" disabled selected>Selecciona un jugador...</option>
+            </select>
+            <button onclick="submitVote()">Enviar Voto</button>
+        </div>
+
+        <!-- Player Result -->
+        <div id="player-result" class="screen">
+            <h2 id="result-title"></h2>
+            <p id="result-message"></p>
+            <button onclick="backToWait()">OK</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- GLOBAL STATE ---
+        let peer = null;
+        let conn = null; // For player
+        let connections = []; // For host: list of { conn, name, score }
+        let myName = "";
+        let isHost = false;
+        
+        // Game State
+        let players = []; // List of names
+        let currentTarget = "";
+        let votes = {}; // { playerName: votedName }
+        let chaosChallenges = ["Canta un Villancico", "Haz un Baile", "Cuenta un Chiste"];
+        let remainingPlayers = [];
+
+        // --- NAVIGATION ---
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // --- HOST LOGIC ---
+
+        function initHost() {
+            isHost = true;
+            peer = new Peer(null, { debug: 2 });
+
+            peer.on('open', (id) => {
+                document.getElementById('room-code-display').innerText = id;
+                new QRCode(document.getElementById("qrcode"), {
+                    text: id,
+                    width: 128,
+                    height: 128
+                });
+                showScreen('host-lobby');
+            });
+
+            peer.on('connection', (c) => {
+                c.on('open', () => {
+                    // Wait for JOIN message
+                    c.on('data', (data) => handleHostData(c, data));
+                });
+                c.on('close', () => {
+                    connections = connections.filter(p => p.conn !== c);
+                    updatePlayerList();
+                });
+            });
+        }
+
+        function handleHostData(c, data) {
+            if (data.type === 'JOIN') {
+                const newPlayer = { conn: c, name: data.name, score: 0 };
+                connections.push(newPlayer);
+                updatePlayerList();
+                // Send current player list to everyone so they know who is in game? 
+                // Ideally we just confirm join.
+                c.send({ type: 'JOIN_CONFIRM' });
+            } else if (data.type === 'VOTE') {
+                votes[getPlayerName(c)] = data.guess;
+                document.getElementById('vote-count').innerText = Object.keys(votes).length;
+            }
+        }
+
+        function getPlayerName(c) {
+            const p = connections.find(x => x.conn === c);
+            return p ? p.name : 'Desconocido';
+        }
+
+        function updatePlayerList() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = connections.map(p => `<li>${p.name}</li>`).join('');
+        }
+
+        function startGame() {
+            if (connections.length < 1) {
+                alert("¡Se necesita al menos 1 jugador para probar!");
+                return; 
+            }
+            players = connections.map(p => p.name);
+            remainingPlayers = [...players];
+            showScreen('host-wheel');
+            drawWheel();
+        }
+
+        // Wheel Logic
+        let wheelCanvas = document.getElementById('wheel-canvas');
+        let ctx = wheelCanvas.getContext('2d');
+        let currentRotation = 0;
+
+        function drawWheel() {
+            const segments = [...remainingPlayers, ...chaosChallenges];
+            const arc = (2 * Math.PI) / segments.length;
+            const colors = ['#D42426', '#165B33', '#F8B229', '#0B2E19'];
+
+            ctx.clearRect(0, 0, 300, 300);
+            ctx.save();
+            ctx.translate(150, 150);
+            ctx.rotate(currentRotation);
+
+            segments.forEach((segment, i) => {
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, 145, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.save();
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 14px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(segment, 130, 5);
+                ctx.restore();
+            });
+            ctx.restore();
+        }
+
+        function spinWheel() {
+            const spinBtn = document.getElementById('spin-btn');
+            spinBtn.disabled = true;
+            
+            const segments = [...remainingPlayers, ...chaosChallenges];
+            // Random spin
+            const spinAngle = Math.random() * 10 + 10; // at least 10 radians
+            const duration = 4000;
+            let start = null;
+            const startRotation = currentRotation;
+
+            function animate(time) {
+                if (!start) start = time;
+                const elapsed = time - start;
+                
+                if (elapsed < duration) {
+                    // Ease out cubic
+                    let t = elapsed / duration;
+                    t--;
+                    const ease = t * t * t + 1;
+                    
+                    currentRotation = startRotation + spinAngle * ease;
+                    drawWheel();
+                    requestAnimationFrame(animate);
+                } else {
+                    currentRotation = startRotation + spinAngle;
+                    drawWheel();
+                    determineWinner(segments);
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function determineWinner(segments) {
+            // Normalize rotation to 0-2PI
+            const actualRotation = currentRotation % (2 * Math.PI);
+            const arc = (2 * Math.PI) / segments.length;
+            
+            // The pointer is at the top (3*PI/2 or -PI/2 in canvas coords if 0 is right)
+            // But we rotated the canvas. 
+            // Let's simplify: The segment at the top is the one that covers 270 degrees (3PI/2) minus rotation
+            // Actually, simpler: Pointer is static at top.
+            // We need to find which segment is at -PI/2 (top).
+            
+            // Index = floor( ((2PI - (rotation % 2PI)) + offset) / arc ) % length
+            // Offset to align 0 with right, pointer is at 270deg (3PI/2)
+            
+            let index = Math.floor((2 * Math.PI - (actualRotation % (2 * Math.PI)) + 1.5 * Math.PI) / arc) % segments.length;
+            
+            const winner = segments[index];
+            currentTarget = winner;
+            
+            setTimeout(() => {
+                startVotingRound(winner);
+            }, 1000);
+        }
+
+        function startVotingRound(target) {
+            votes = {};
+            document.getElementById('vote-count').innerText = "0";
+            document.getElementById('target-name').innerText = target;
+            
+            // Broadcast to players
+            broadcast({ 
+                type: 'VOTE_START', 
+                target: target, 
+                candidates: players.filter(p => p !== target) // Can't vote for self if target is player? Actually anyone can be target.
+            });
+            
+            showScreen('host-scoring');
+        }
+
+        function broadcast(msg) {
+            connections.forEach(p => p.conn.send(msg));
+        }
+
+        function revealAndScore() {
+            // Logic: 
+            // If target is a Chaos Challenge, no scoring, just fun.
+            // If target is a Player, check votes.
+            
+            const isChaos = chaosChallenges.includes(currentTarget);
+            let results = [];
+
+            if (isChaos) {
+                broadcast({ type: 'RESULT', title: '¡CAOS!', message: `Todos hagan: ${currentTarget}` });
+                document.getElementById('round-summary').innerHTML = `<h3>Desafío de Caos: ${currentTarget}</h3>`;
+            } else {
+                // Real scoring logic would go here (e.g. if they guessed who the secret santa is?)
+                // But the prompt implies "Spin ends on a Person" -> "Vote".
+                // Usually Secret Santa is pre-assigned. 
+                // This game seems to be "Guess who the wheel picked" or similar?
+                // Prompt says: "When spin ends on a Person... Listen for incoming VOTE... Show live count... Reveal & Score"
+                // Let's assume the game is "Guess who the wheel picked" (which is trivial since they see it?)
+                // OR, maybe the wheel is hidden from players?
+                // "Render a spinning wheel... When spin ends... send VOTE_START"
+                // Players see "VOTE_START". They don't see the wheel result?
+                // Ah, "Screen 2 (The Wheel): Render a spinning wheel... When spin ends... send data { type: 'VOTE_START', receiver: 'Name' }"
+                // Wait, if I send receiver 'Name', they know who it is.
+                // Maybe the goal is to guess something else?
+                // "Vote Screen: When receiving VOTE_START, show a dropdown of players. User selects one..."
+                // If the prompt implies the players DON'T know who the wheel landed on, then I shouldn't send the name.
+                // BUT the prompt says: "When spin ends on a Person, send data { type: 'VOTE_START', receiver: 'Name' }"
+                // Maybe 'receiver' is just internal?
+                // Let's assume the players DO NOT know who was picked.
+                // So I will send VOTE_START but NOT the target name to players.
+                
+                // RE-READING PROMPT: "When spin ends on a Person, send data { type: 'VOTE_START', receiver: 'Name' } to all connections."
+                // If I send it, they have it. Maybe the client hides it?
+                // Or maybe the game is "Who is the Secret Santa for [Name]?"
+                // Let's stick to a simple interpretation:
+                // Host spins. Wheel lands on "Alice".
+                // Host sends "VOTE_START".
+                // Players guess... who? Maybe they guess "Alice"?
+                // If the wheel is on the Host screen, and players are on phones, they might not see the screen.
+                // So the game is "Guess who the wheel picked".
+                
+                // Let's implement: Host knows target. Players guess target.
+                
+                connections.forEach(p => {
+                    const guess = votes[p.name];
+                    const correct = guess === currentTarget;
+                    if (correct) p.score += 10;
+                    p.conn.send({ 
+                        type: 'RESULT', 
+                        title: correct ? '¡Correcto!' : '¡Incorrecto!', 
+                        message: correct ? `¡Era ${currentTarget}!` : `Era ${currentTarget}, no ${guess}.`
+                    });
+                });
+
+                document.getElementById('round-summary').innerHTML = `<h3>El objetivo era: ${currentTarget}</h3>`;
+                
+                // Remove player from wheel if it was a person
+                if (!isChaos) {
+                    remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
+                }
+            }
+            
+            showScreen('host-results');
+        }
+
+        function nextRound() {
+            if (remainingPlayers.length === 0) {
+                alert("¡Juego Terminado!");
+                // Reset
+                remainingPlayers = [...players];
+            }
+            document.getElementById('spin-btn').disabled = false;
+            showScreen('host-wheel');
+            drawWheel();
+        }
+
+
+        // --- PLAYER LOGIC ---
+
+        function showJoinScreen() {
+            showScreen('player-join');
+        }
+
+        function joinGame() {
+            myName = document.getElementById('player-name').value;
+            const roomCode = document.getElementById('join-code').value;
+            
+            if (!myName || !roomCode) {
+                alert("Por favor ingresa Nombre y Código de Sala");
+                return;
+            }
+
+            document.getElementById('join-status').innerText = "Conectando...";
+            
+            peer = new Peer();
+            peer.on('open', (id) => {
+                conn = peer.connect(roomCode);
+                
+                conn.on('open', () => {
+                    document.getElementById('join-status').innerText = "¡Conectado! Uniéndose...";
+                    conn.send({ type: 'JOIN', name: myName });
+                });
+
+                conn.on('data', (data) => handlePlayerData(data));
+                
+                conn.on('close', () => {
+                    alert("Desconectado del anfitrión");
+                    showScreen('player-join');
+                });
+                
+                conn.on('error', (err) => {
+                    alert("Error de Conexión: " + err);
+                });
+            });
+        }
+
+        function handlePlayerData(data) {
+            if (data.type === 'JOIN_CONFIRM') {
+                showScreen('player-wait');
+            } else if (data.type === 'VOTE_START') {
+                // Populate dropdown
+                const select = document.getElementById('vote-select');
+                select.innerHTML = '<option value="" disabled selected>Selecciona un jugador...</option>';
+                // We need the list of players. 
+                // In a real app, we'd sync the player list. 
+                // For now, let's assume the host sent the candidates list in VOTE_START
+                if (data.candidates) {
+                    data.candidates.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = p;
+                        opt.innerText = p;
+                        select.appendChild(opt);
+                    });
+                }
+                showScreen('player-vote');
+                // Hide the target name from player if the game is to guess it
+                document.getElementById('vote-target').innerText = "???"; 
+            } else if (data.type === 'RESULT') {
+                document.getElementById('result-title').innerText = data.title;
+                document.getElementById('result-message').innerText = data.message;
+                showScreen('player-result');
+            }
+        }
+
+        function submitVote() {
+            const choice = document.getElementById('vote-select').value;
+            if (!choice) return;
+            
+            conn.send({ type: 'VOTE', guess: choice });
+            showScreen('player-wait');
+        }
+
+        function backToWait() {
+            showScreen('player-wait');
+        }
+
+    </script>
+</body>
+</html>
