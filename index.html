@@ -297,7 +297,9 @@
             
             <div style="margin: 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px;">
                 <h3>Esperando respuestas...</h3>
-                <div class="vote-count" id="vote-count">0</div>
+                <div class="vote-count">
+                    <span id="votes-received-count">0</span> / <span id="total-players-count">0</span>
+                </div>
                 <p>Jugadores han votado</p>
             </div>
 
@@ -524,9 +526,11 @@
                 
                 const count = currentRoundVotes.length;
                 const total = connections.length;
-                document.getElementById('vote-count').innerText = count;
-                document.getElementById('votes-received-count').innerText = count;
-                document.getElementById('total-players-count').innerText = total;
+                // document.getElementById('vote-count').innerText = count;
+                const vrc = document.getElementById('votes-received-count');
+                if(vrc) vrc.innerText = count;
+                const tpc = document.getElementById('total-players-count');
+                if(tpc) tpc.innerText = total;
                 
                 if (count >= total) {
                     document.getElementById('finish-round-btn').disabled = false;
@@ -687,9 +691,12 @@
         function startVotingRound(target, challenge) {
             currentRoundVotes = [];
             
-            document.getElementById('vote-count').innerText = "0";
-            document.getElementById('votes-received-count').innerText = "0";
-            document.getElementById('total-players-count').innerText = connections.length;
+            // document.getElementById('vote-count').innerText = "0";
+            const vrc = document.getElementById('votes-received-count');
+            if(vrc) vrc.innerText = "0";
+            const tpc = document.getElementById('total-players-count');
+            if(tpc) tpc.innerText = connections.length;
+
             document.getElementById('target-name').innerText = target;
             document.getElementById('finish-round-btn').disabled = true;
             document.getElementById('host-status-msg').innerText = "Esperando votos...";
@@ -950,7 +957,7 @@
                 const challengeDesc = data.challenge.desc || "";
                 const summaryText = `<strong>${data.target}</strong> debe abrir su regalo: <strong>${challengeTitle}</strong><br>(${challengeDesc})`;
                 document.getElementById('vote-summary').innerHTML = summaryText;
-                document.getElementById('vote-target-name').innerText = data.target;
+                // document.getElementById('vote-target-name').innerText = data.target; // Removed: Element does not exist in player-vote
 
                 // Hide "I am giver" if I am the target
                 if (myName === data.target) {
