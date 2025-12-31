@@ -299,7 +299,20 @@
 
         function initHost() {
             isHost = true;
-            peer = new Peer(null, { debug: 2 });
+            peer = new Peer(null, { 
+                debug: 2,
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error("Host Error:", err);
+                alert("Error del Anfitrión: " + err.type);
+            });
 
             peer.on('open', (id) => {
                 document.getElementById('room-code-display').innerText = id;
@@ -563,9 +576,38 @@
 
             document.getElementById('join-status').innerText = "Conectando...";
             
-            peer = new Peer();
+            // Close existing peer if any
+            if (peer) {
+                peer.destroy();
+            }
+
+            peer = new Peer(null, {
+                config: {
+                    'iceServers': [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error("Player Error:", err);
+                let msg = "Error Desconocido";
+                if (err.type === 'peer-unavailable') {
+                    msg = "No se encontró la sala. Verifica el código o que el anfitrión esté conectado.";
+                } else if (err.type === 'network') {
+                    msg = "Error de red. Intenta conectarte al WiFi.";
+                } else {
+                    msg = err.type;
+                }
+                alert("Error: " + msg);
+                document.getElementById('join-status').innerText = "Error de conexión";
+            });
+
             peer.on('open', (id) => {
-                conn = peer.connect(roomCode);
+                conn = peer.connect(roomCode, {
+                    reliable: true
+                });
                 
                 conn.on('open', () => {
                     document.getElementById('join-status').innerText = "¡Conectado! Uniéndose...";
