@@ -212,23 +212,23 @@
         <!-- Host Wheel -->
         <div id="host-wheel" class="screen">
             <h2>¡Gira las Ruletas!</h2>
-            <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: nowrap; overflow-x: auto;">
                 
                 <!-- Player Wheel -->
                 <div style="display: flex; flex-direction: column; align-items: center;">
                     <h3>Jugador</h3>
-                    <div style="position: relative; width: 300px; height: 300px;">
+                    <div style="position: relative; width: 220px; height: 220px;">
                         <div class="pointer"></div>
-                        <canvas id="wheel-canvas-names" width="300" height="300" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                        <canvas id="wheel-canvas-names" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
                 </div>
 
                 <!-- Challenge Wheel -->
                 <div style="display: flex; flex-direction: column; align-items: center;">
                     <h3>Desafío</h3>
-                    <div style="position: relative; width: 300px; height: 300px;">
+                    <div style="position: relative; width: 220px; height: 220px;">
                         <div class="pointer"></div>
-                        <canvas id="wheel-canvas-actions" width="300" height="300" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                        <canvas id="wheel-canvas-actions" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
                 </div>
 
@@ -272,10 +272,32 @@
             <div style="font-size: 3rem;">🎁</div>
         </div>
 
+        <!-- Player Wheel -->
+        <div id="player-wheel" class="screen">
+            <h2>¡Girando!</h2>
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: nowrap; overflow-x: auto;">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <h3>Jugador</h3>
+                    <div style="position: relative; width: 220px; height: 220px;">
+                        <div class="pointer"></div>
+                        <canvas id="wheel-canvas-names-player" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <h3>Desafío</h3>
+                    <div style="position: relative; width: 220px; height: 220px;">
+                        <div class="pointer"></div>
+                        <canvas id="wheel-canvas-actions-player" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Player Vote -->
         <div id="player-vote" class="screen">
             <h2>¿Quién es?</h2>
-            <p>La ruleta cayó en: <span id="vote-target" style="font-weight: bold;"></span></p>
+            <div id="vote-summary" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px;"></div>
+            <p>¿Quién crees que le regaló a <span id="vote-target-name" style="font-weight: bold; color: var(--christmas-gold);"></span>?</p>
             <select id="vote-select">
                 <option value="" disabled selected>Selecciona un jugador...</option>
             </select>
@@ -417,19 +439,25 @@
         function drawWheel(canvasId, segments, rotation) {
             const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = (width / 2) - 5;
+
             const arc = (2 * Math.PI) / segments.length;
             const colors = ['#D42426', '#165B33', '#F8B229', '#0B2E19'];
 
-            ctx.clearRect(0, 0, 300, 300);
+            ctx.clearRect(0, 0, width, height);
             ctx.save();
-            ctx.translate(150, 150);
+            ctx.translate(centerX, centerY);
             ctx.rotate(rotation);
 
             segments.forEach((segment, i) => {
                 ctx.beginPath();
                 ctx.fillStyle = colors[i % colors.length];
                 ctx.moveTo(0, 0);
-                ctx.arc(0, 0, 145, i * arc, (i + 1) * arc);
+                ctx.arc(0, 0, radius, i * arc, (i + 1) * arc);
                 ctx.fill();
                 ctx.stroke();
 
@@ -444,7 +472,7 @@
                     text = segment.title;
                 }
                 
-                ctx.fillText(text, 130, 5);
+                ctx.fillText(text, radius - 15, 5);
                 ctx.restore();
             });
             ctx.restore();
@@ -453,10 +481,27 @@
         function spinBothWheels() {
              document.getElementById('spin-btn').disabled = true;
              
+             // Generate random spin parameters
+             const angleNames = Math.random() * 10 + 10;
+             const angleActions = Math.random() * 10 + 10;
+             const duration = 4000 + Math.random() * 1000;
+
+             // Broadcast to players
+             broadcast({
+                 type: 'SPIN',
+                 angleNames: angleNames,
+                 angleActions: angleActions,
+                 duration: duration,
+                 players: remainingPlayers,
+                 challenges: challenges,
+                 startRotNames: rotationNames,
+                 startRotActions: rotationActions
+             });
+             
              let finishedCount = 0;
              
              // Spin Names
-             spinSingleWheel('wheel-canvas-names', remainingPlayers, rotationNames, (finalRot, winner) => {
+             spinSingleWheel('wheel-canvas-names', remainingPlayers, rotationNames, angleNames, duration, (finalRot, winner) => {
                  rotationNames = finalRot;
                  currentTarget = winner;
                  finishedCount++;
@@ -464,7 +509,7 @@
              });
              
              // Spin Actions
-             spinSingleWheel('wheel-canvas-actions', challenges, rotationActions, (finalRot, winner) => {
+             spinSingleWheel('wheel-canvas-actions', challenges, rotationActions, angleActions, duration, (finalRot, winner) => {
                  rotationActions = finalRot;
                  currentChallenge = winner;
                  finishedCount++;
@@ -474,15 +519,15 @@
              function checkFinished() {
                  if (finishedCount === 2) {
                      setTimeout(() => {
-                         startVotingRound(currentTarget);
+                         startVotingRound(currentTarget, currentChallenge);
                      }, 1000);
                  }
              }
         }
 
-        function spinSingleWheel(canvasId, segments, startRotation, callback) {
-            const spinAngle = Math.random() * 10 + 10; 
-            const duration = 4000 + Math.random() * 1000; 
+        function spinSingleWheel(canvasId, segments, startRotation, forceAngle, forceDuration, callback) {
+            const spinAngle = forceAngle || (Math.random() * 10 + 10); 
+            const duration = forceDuration || (4000 + Math.random() * 1000); 
             let start = null;
             
             function animate(time) {
@@ -506,13 +551,13 @@
                     const arc = (2 * Math.PI) / segments.length;
                     let index = Math.floor((2 * Math.PI - (actualRotation % (2 * Math.PI)) + 1.5 * Math.PI) / arc) % segments.length;
                     
-                    callback(finalRot, segments[index]);
+                    if (callback) callback(finalRot, segments[index]);
                 }
             }
             requestAnimationFrame(animate);
         }
 
-        function startVotingRound(target) {
+        function startVotingRound(target, challenge) {
             votes = {};
             document.getElementById('vote-count').innerText = "0";
             document.getElementById('target-name').innerText = target;
@@ -521,6 +566,7 @@
             broadcast({ 
                 type: 'VOTE_START', 
                 target: target, 
+                challenge: challenge,
                 candidates: players.filter(p => p !== target) 
             });
             
@@ -643,6 +689,18 @@
         function handlePlayerData(data) {
             if (data.type === 'JOIN_CONFIRM') {
                 showScreen('player-wait');
+            } else if (data.type === 'SPIN') {
+                // Show wheel screen
+                showScreen('player-wheel');
+                
+                // Draw initial state
+                drawWheel('wheel-canvas-names-player', data.players, data.startRotNames);
+                drawWheel('wheel-canvas-actions-player', data.challenges, data.startRotActions);
+                
+                // Spin
+                spinSingleWheel('wheel-canvas-names-player', data.players, data.startRotNames, data.angleNames, data.duration, null);
+                spinSingleWheel('wheel-canvas-actions-player', data.challenges, data.startRotActions, data.angleActions, data.duration, null);
+                
             } else if (data.type === 'VOTE_START') {
                 // Populate dropdown
                 const select = document.getElementById('vote-select');
@@ -658,9 +716,15 @@
                         select.appendChild(opt);
                     });
                 }
+                
+                // Update Summary
+                const challengeTitle = data.challenge.title || "Desafío";
+                const challengeDesc = data.challenge.desc || "";
+                const summaryText = `<strong>${data.target}</strong> debe abrir su regalo: <strong>${challengeTitle}</strong><br>(${challengeDesc})`;
+                document.getElementById('vote-summary').innerHTML = summaryText;
+                document.getElementById('vote-target-name').innerText = data.target;
+
                 showScreen('player-vote');
-                // Hide the target name from player if the game is to guess it
-                document.getElementById('vote-target').innerText = "???"; 
             } else if (data.type === 'RESULT') {
                 document.getElementById('result-title').innerText = data.title;
                 document.getElementById('result-message').innerText = data.message;
