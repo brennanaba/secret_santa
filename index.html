@@ -631,6 +631,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             if (roomParam) {
+                // Ensure role-selection is hidden and inactive
+                document.getElementById('role-selection').classList.remove('active');
+                document.getElementById('role-selection').style.display = 'none';
+
                 const joinCodeInput = document.getElementById('join-code');
                 joinCodeInput.value = roomParam;
                 joinCodeInput.style.display = 'none';
