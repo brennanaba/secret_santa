@@ -303,8 +303,9 @@
 
             peer.on('open', (id) => {
                 document.getElementById('room-code-display').innerText = id;
+                const joinUrl = `https://brennanaba.github.io/secret_santa/?room=${id}`;
                 new QRCode(document.getElementById("qrcode"), {
-                    text: id,
+                    text: joinUrl,
                     width: 128,
                     height: 128
                 });
@@ -623,6 +624,17 @@
         function backToWait() {
             showScreen('player-wait');
         }
+
+        // --- INITIALIZATION ---
+        // Check for room code in URL
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+            if (roomParam) {
+                document.getElementById('join-code').value = roomParam;
+                showScreen('player-join');
+            }
+        });
 
     </script>
 </body>
