@@ -647,10 +647,10 @@
 
         // Wheel Logic
         let rotationNames = 0;
-                ctx.rotate(i * arc + arc / 2);
-                ctx.fillStyle = "white";
-                ctx.font = "bold 10px Arial";
-                ctx.textAlign = "right";lementById(canvasId);
+        let rotationActions = 0;
+
+        function drawWheel(canvasId, segments, rotation) {
+            const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
@@ -677,7 +677,7 @@
                 ctx.save();
                 ctx.rotate(i * arc + arc / 2);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 12px Arial";
+                ctx.font = "bold 10px Arial";
                 ctx.textAlign = "right";
                 
                 let text = segment;
@@ -1151,6 +1151,10 @@
                 document.getElementById('role-selection').classList.remove('active');
                 document.getElementById('role-selection').style.display = 'none';
 
+                const joinCodeInput = document.getElementById('join-code');
+                joinCodeInput.value = roomParam;
+                joinCodeInput.style.display = 'none';
+                showScreen('player-join');
             } else {
                 showScreen('role-selection');
             }
@@ -1174,10 +1178,6 @@
         }
         
         setInterval(createSnow, 200);
-
-    </script>   showScreen('role-selection');
-            }
-        })();
 
     </script>
 </body>
