@@ -8,17 +8,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
-            --christmas-red: #D42426;
-            --christmas-green: #165B33;
-            --christmas-gold: #F8B229;
-            --snow-white: #F0F0F0;
-            --dark-green: #0B2E19;
+            --rustic-bg: #1a2621;
+            --rustic-paper: #f4f1ea;
+            --rustic-red: #8a1c1c;
+            --rustic-gold: #c5a059;
+            --rustic-text: #2c3531;
+            --rustic-green: #2d4a3e;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--dark-green);
-            color: var(--snow-white);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--rustic-bg);
+            color: var(--rustic-text);
             margin: 0;
             padding: 0;
             display: flex;
@@ -32,60 +33,73 @@
         .container {
             width: 90%;
             max-width: 600px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
+            background-color: var(--rustic-paper);
             padding: 2rem;
-            border-radius: 20px;
-            border: 2px solid var(--christmas-gold);
-            box-shadow: 0 0 20px rgba(248,178,41,0.3);
+            border-radius: 8px;
+            border: 1px solid var(--rustic-gold);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         h1, h2, h3 {
-            color: var(--christmas-gold);
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Georgia', serif;
+            color: var(--rustic-red);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            text-shadow: none;
         }
 
         button {
-            background-color: var(--christmas-red);
-            color: white;
-            border: none;
+            background-color: var(--rustic-green);
+            color: var(--rustic-paper);
+            border: 1px solid var(--rustic-green);
             padding: 15px 30px;
-            font-size: 1.2rem;
-            border-radius: 50px;
+            font-size: 1rem;
+            border-radius: 4px;
             cursor: pointer;
             margin: 10px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            font-weight: bold;
+            transition: all 0.3s ease;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: none;
         }
 
         button:hover {
+            background-color: var(--rustic-bg);
+            border-color: var(--rustic-gold);
+            color: var(--rustic-gold);
             transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.4);
-            background-color: #ff3336;
         }
 
         button:disabled {
-            background-color: #555;
+            background-color: #ccc;
+            border-color: #ccc;
             cursor: not-allowed;
             transform: none;
+            color: #666;
         }
 
         input, select {
             padding: 12px;
-            border-radius: 10px;
-            border: 2px solid var(--christmas-gold);
-            background: rgba(255,255,255,0.9);
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background: white;
             font-size: 1rem;
             margin: 10px 0;
             width: 80%;
-            color: var(--dark-green);
+            color: var(--rustic-text);
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--rustic-gold);
         }
 
         .screen {
             display: none;
-            animation: fadeIn 0.5s ease-in-out;
+            animation: fadeIn 0.6s ease-out;
         }
 
         .screen.active {
@@ -93,7 +107,7 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -105,8 +119,8 @@
         }
 
         .big-btn {
-            font-size: 2rem;
-            padding: 40px;
+            font-size: 1.5rem;
+            padding: 30px;
         }
 
         #host-lobby ul {
@@ -115,54 +129,28 @@
         }
 
         #host-lobby li {
-            background: rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.05);
             margin: 5px 0;
             padding: 10px;
-            border-radius: 10px;
+            border-radius: 4px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
 
         #qrcode {
             background: white;
-            padding: 10px;
+            padding: 15px;
             display: inline-block;
-            border-radius: 10px;
+            border: 1px solid #ddd;
             margin: 20px 0;
         }
 
         /* Wheel Styles */
-        .wheel-container {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            margin: 0 auto 20px;
-            border-radius: 50%;
-            border: 5px solid var(--christmas-gold);
-            overflow: hidden;
-            transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1);
-        }
-
-        .wheel-segment {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-            transform-origin: 100% 100%;
-            left: 0;
-            top: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            font-size: 0.8rem;
-            /* Clip path to make pie slices - simplified for CSS only, JS will handle rotation */
-        }
-        
         .pointer {
             width: 0; 
             height: 0; 
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 30px solid var(--christmas-red);
+            border-top: 30px solid var(--rustic-red);
             position: absolute;
             top: -10px;
             left: 50%;
@@ -173,30 +161,18 @@
         .vote-count {
             font-size: 3rem;
             font-weight: bold;
-            color: var(--christmas-gold);
+            color: var(--rustic-gold);
+            font-family: 'Georgia', serif;
         }
 
         .result-box {
-            background: var(--christmas-red);
+            background: var(--rustic-red);
+            color: white;
             padding: 20px;
-            border-radius: 15px;
+            border-radius: 8px;
             margin-top: 20px;
         }
 
-        .slider-container {
-            margin: 20px 0;
-            text-align: left;
-        }
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-        }
-        input[type=range] {
-            width: 100%;
-            accent-color: var(--christmas-gold);
-        }
-        
         table {
             width: 100%;
             border-collapse: collapse;
@@ -204,18 +180,20 @@
         }
         th, td {
             padding: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
         th {
-            color: var(--christmas-gold);
+            color: var(--rustic-gold);
+            font-family: 'Georgia', serif;
         }
 
         /* Star Rating */
         .rating-group {
             margin: 15px 0;
-            background: rgba(255,255,255,0.1);
-            padding: 10px;
-            border-radius: 10px;
+            background: rgba(0,0,0,0.03);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.05);
         }
         .stars {
             display: inline-flex;
@@ -228,15 +206,15 @@
         }
         .stars label {
             font-size: 2rem;
-            color: #888;
+            color: #ccc;
             cursor: pointer;
             transition: color 0.2s;
         }
         .stars input:checked ~ label,
         .stars label:hover,
         .stars label:hover ~ label {
-            color: var(--christmas-gold);
-            text-shadow: 0 0 10px var(--christmas-gold);
+            color: var(--rustic-gold);
+            text-shadow: none;
         }
 
         /* --- RESPONSIVE & MOBILE STYLES --- */
@@ -263,11 +241,12 @@
 
         .giver-container {
             margin-bottom: 15px; 
-            background: rgba(255,255,255,0.1); 
+            background: rgba(0,0,0,0.03); 
             padding: 15px; 
-            border-radius: 10px;
+            border-radius: 4px;
             display: flex;
             justify-content: center; /* Center the checkbox group */
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
         .giver-label {
@@ -277,6 +256,10 @@
             cursor: pointer;
             text-align: left;
             max-width: 100%;
+        }
+        
+        .giver-label span {
+             color: var(--rustic-red) !important;
         }
 
         @media (max-width: 600px) {
@@ -648,7 +631,7 @@
             const radius = (width / 2) - 5;
 
             const arc = (2 * Math.PI) / segments.length;
-            const colors = ['#D42426', '#165B33', '#F8B229', '#0B2E19'];
+            const colors = ['#8a1c1c', '#2d4a3e', '#c5a059', '#1a2621'];
 
             ctx.clearRect(0, 0, width, height);
             ctx.save();
