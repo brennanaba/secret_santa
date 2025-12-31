@@ -294,17 +294,15 @@
         <div id="host-scoring" class="screen">
             <h2>Votación en Curso...</h2>
             <p>Objetivo: <span id="target-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
-            <div class="vote-count" id="vote-count">0</div>
-            <p>Votos y Puntuaciones Recibidas</p>
             
             <div style="margin: 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px;">
-                <h3>¿Quién fue el Amigo Invisible?</h3>
-                <select id="real-giver-select">
-                    <option value="" disabled selected>Selecciona al regalador real...</option>
-                </select>
+                <h3>Esperando respuestas...</h3>
+                <div class="vote-count" id="vote-count">0</div>
+                <p>Jugadores han votado</p>
             </div>
 
-            <button onclick="finishRound()">Guardar y Siguiente Ronda</button>
+            <button id="finish-round-btn" onclick="finishRound()" disabled>Finalizar Ronda</button>
+            <p id="host-status-msg" style="font-size: 0.9rem; color: #aaa;"></p>
         </div>
 
         <!-- Game Over Leaderboard -->
@@ -360,9 +358,19 @@
             <div id="vote-summary" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px;"></div>
             
             <h3>1. ¿Quién crees que fue?</h3>
-            <select id="vote-select">
-                <option value="" disabled selected>Selecciona un jugador...</option>
-            </select>
+            
+            <div id="giver-checkbox-container" style="margin-bottom: 15px; text-align: left; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="is-giver-check" onchange="toggleGuessInput(this)">
+                    <span style="font-size: 1.1rem; font-weight: bold; color: var(--christmas-gold);">🎁 ¡Fui yo! (Yo regalé esto)</span>
+                </label>
+            </div>
+
+            <div id="guess-container">
+                <select id="vote-select">
+                    <option value="" disabled selected>Selecciona un jugador...</option>
+                </select>
+            </div>
 
             <h3>2. Puntúa el Regalo</h3>
             
@@ -423,7 +431,7 @@
         let players = []; // List of names
         let currentTarget = "";
         let currentChallenge = "";
-        let currentRoundVotes = []; // Array of { name, guess, ratings: {orig, fit, eff} }
+        let currentRoundVotes = []; // Array of { name, guess, ratings: {orig, fit, eff}, isGiver }
         let gameHistory = []; // Array of { target, giver, votes: [], scores: {orig, fit, eff, total} }
         
         let challenges = [
@@ -505,12 +513,27 @@
                 // Ideally we just confirm join.
                 c.send({ type: 'JOIN_CONFIRM' });
             } else if (data.type === 'VOTE_AND_RATE') {
+                // Check if player already voted (update if so, or just push)
+                // Simple implementation: just push
                 currentRoundVotes.push({
                     name: getPlayerName(c),
                     guess: data.guess,
-                    ratings: data.ratings
+                    ratings: data.ratings,
+                    isGiver: data.isGiver
                 });
-                document.getElementById('vote-count').innerText = currentRoundVotes.length;
+                
+                const count = currentRoundVotes.length;
+                const total = connections.length;
+                document.getElementById('vote-count').innerText = count;
+                document.getElementById('votes-received-count').innerText = count;
+                document.getElementById('total-players-count').innerText = total;
+                
+                if (count >= total) {
+                    document.getElementById('finish-round-btn').disabled = false;
+                    document.getElementById('host-status-msg').innerText = "¡Todos han votado!";
+                } else {
+                    document.getElementById('host-status-msg').innerText = `Esperando a ${total - count} jugadores...`;
+                }
             }
         }
 
@@ -662,25 +685,15 @@
         }
 
         function startVotingRound(target, challenge) {
-            votes = {};
-            ratings = [];
-            realGiver = "";
+            currentRoundVotes = [];
             
             document.getElementById('vote-count').innerText = "0";
+            document.getElementById('votes-received-count').innerText = "0";
+            document.getElementById('total-players-count').innerText = connections.length;
             document.getElementById('target-name').innerText = target;
+            document.getElementById('finish-round-btn').disabled = true;
+            document.getElementById('host-status-msg').innerText = "Esperando votos...";
             
-            // Populate Giver Select
-            const giverSelect = document.getElementById('real-giver-select');
-            giverSelect.innerHTML = '<option value="" disabled selected>Selecciona al regalador real...</option>';
-            players.forEach(p => {
-                if (p !== target) { // Can't give to self usually
-                    const opt = document.createElement('option');
-                    opt.value = p;
-                    opt.innerText = p;
-                    giverSelect.appendChild(opt);
-                }
-            });
-
             // Broadcast to players
             broadcast({ 
                 type: 'VOTE_START', 
@@ -696,86 +709,55 @@
             connections.forEach(p => p.conn.send(msg));
         }
 
-        function revealAndRate() {
-            const select = document.getElementById('real-giver-select');
-            realGiver = select.value;
+        function finishRound() {
+            // Find the Real Giver
+            const givers = currentRoundVotes.filter(v => v.isGiver);
+            let realGiver = "Desconocido";
             
-            if (!realGiver) {
-                alert("Por favor selecciona quién fue el regalador real.");
-                return;
+            if (givers.length === 1) {
+                realGiver = givers[0].name;
+            } else if (givers.length > 1) {
+                // Conflict!
+                alert(`¡Conflicto! ${givers.length} personas dicen que regalaron: ${givers.map(g=>g.name).join(', ')}. Se usará el primero.`);
+                realGiver = givers[0].name;
+            } else {
+                // No one claimed it
+                alert("¡Nadie dijo 'Fui yo'! Se registrará como Desconocido.");
             }
 
-            // Calculate Guessing Scores
-            connections.forEach(p => {
-                const guess = votes[p.name];
-                const correct = guess === realGiver;
-                if (correct) p.score += 10;
-                
-                // Send Reveal Info
-                p.conn.send({ 
-                    type: 'REVEAL_AND_RATE', 
-                    giver: realGiver,
-                    correct: correct,
-                    message: correct ? `¡Acertaste! Fue ${realGiver}.` : `Fue ${realGiver}, no ${guess}.`
-                });
-            });
-
-            document.getElementById('rating-giver-name').innerText = realGiver;
-            document.getElementById('rating-count').innerText = "0";
-            showScreen('host-rating-wait');
-        }
-
-        function finishRound() {
-            // Calculate Average Ratings
+            // Calculate Average Ratings for this round
+            // Filter out the giver's own rating? Usually yes.
+            const validRatings = currentRoundVotes.filter(v => v.name !== realGiver);
+            
             let avgOrig = 0, avgFit = 0, avgEff = 0;
-            if (ratings.length > 0) {
-                avgOrig = ratings.reduce((sum, r) => sum + parseInt(r.orig), 0) / ratings.length;
-                avgFit = ratings.reduce((sum, r) => sum + parseInt(r.fit), 0) / ratings.length;
-                avgEff = ratings.reduce((sum, r) => sum + parseInt(r.eff), 0) / ratings.length;
+            if (validRatings.length > 0) {
+                avgOrig = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.orig), 0) / validRatings.length;
+                avgFit = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.fit), 0) / validRatings.length;
+                avgEff = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.eff), 0) / validRatings.length;
             }
             
             const totalRoundScore = avgOrig + avgFit + avgEff;
             
-            // Store Scores
-            if (!giftScores[realGiver]) {
-                giftScores[realGiver] = { total: 0, count: 0, details: [] };
-            }
-            giftScores[realGiver].total += totalRoundScore;
-            giftScores[realGiver].count += 1;
-            giftScores[realGiver].details.push({
+            // Store Round Data
+            gameHistory.push({
                 target: currentTarget,
-                orig: avgOrig.toFixed(1),
-                fit: avgFit.toFixed(1),
-                eff: avgEff.toFixed(1),
-                total: totalRoundScore.toFixed(1)
+                giver: realGiver,
+                votes: [...currentRoundVotes], // Copy array
+                scores: {
+                    orig: avgOrig,
+                    fit: avgFit,
+                    eff: avgEff,
+                    total: totalRoundScore
+                }
             });
 
-            let challengeDisplay = currentChallenge;
-            if (typeof currentChallenge === 'object') {
-                challengeDisplay = `<strong>${currentChallenge.title}</strong><br><span style="font-size: 1rem;">${currentChallenge.desc}</span>`;
-            }
-
-            document.getElementById('round-summary').innerHTML = `
-                <h3>El objetivo era: ${currentTarget}</h3>
-                <p>Regalado por: <strong>${realGiver}</strong></p>
-                <p style="font-size: 1.2rem; color: var(--christmas-gold);">Desafío: ${challengeDisplay}</p>
-            `;
-            
-            document.getElementById('round-scores').innerHTML = `
-                <h4>Puntuación del Regalo</h4>
-                <p>Originalidad: ${avgOrig.toFixed(1)} / 10</p>
-                <p>Adecuación: ${avgFit.toFixed(1)} / 10</p>
-                <p>Esfuerzo: ${avgEff.toFixed(1)} / 10</p>
-                <p style="font-size: 1.2rem; font-weight: bold;">Total: ${totalRoundScore.toFixed(1)}</p>
-            `;
-            
             // Remove player from wheel
             remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
             
-            // Broadcast Round End
+            // Broadcast Round End (Just go back to wait)
             broadcast({ type: 'ROUND_END' });
 
-            showScreen('host-results');
+            nextRound();
         }
 
         function nextRound() {
@@ -790,43 +772,75 @@
         }
 
         function showLeaderboard() {
-            // Calculate Rankings
-            const ranking = Object.keys(giftScores).map(name => {
-                const data = giftScores[name];
-                // If multiple gifts, average the totals? Or sum? Usually sum if everyone gives 1.
-                // Assuming 1 gift per person.
-                return { name: name, score: data.total };
+            // 1. Calculate Best Giver
+            let giverScores = {};
+            gameHistory.forEach(round => {
+                if (!giverScores[round.giver]) giverScores[round.giver] = 0;
+                giverScores[round.giver] += round.scores.total;
+            });
+            
+            const giverRanking = Object.keys(giverScores).map(name => {
+                return { name: name, score: giverScores[name] };
             }).sort((a, b) => b.score - a.score);
 
+            // 2. Calculate Best Guesser
+            let guesserScores = {};
+            gameHistory.forEach(round => {
+                round.votes.forEach(vote => {
+                    if (vote.guess === round.giver) {
+                        if (!guesserScores[vote.name]) guesserScores[vote.name] = 0;
+                        guesserScores[vote.name] += 1;
+                    }
+                });
+            });
+            
+            const guesserRanking = Object.keys(guesserScores).map(name => {
+                return { name: name, score: guesserScores[name] };
+            }).sort((a, b) => b.score - a.score);
+
+
             let html = `
+                <h2>🎁 Mejor Regalador</h2>
                 <table>
-                    <tr>
-                        <th>Pos</th>
-                        <th>Nombre</th>
-                        <th>Puntos</th>
-                    </tr>
+                    <tr><th>Pos</th><th>Nombre</th><th>Puntos</th></tr>
             `;
             
-            ranking.forEach((r, i) => {
+            giverRanking.forEach((r, i) => {
                 let medal = "";
                 if (i === 0) medal = "🥇 ";
                 if (i === 1) medal = "🥈 ";
                 if (i === 2) medal = "🥉 ";
-                
-                html += `
-                    <tr>
-                        <td>${i + 1}</td>
-                        <td>${medal}${r.name}</td>
-                        <td>${r.score.toFixed(1)}</td>
-                    </tr>
-                `;
+                html += `<tr><td>${i + 1}</td><td>${medal}${r.name}</td><td>${r.score.toFixed(1)}</td></tr>`;
             });
+            html += `</table>`;
+
+            html += `
+                <h2 style="margin-top: 30px;">🕵️ Mejor Detective</h2>
+                <table>
+                    <tr><th>Pos</th><th>Nombre</th><th>Aciertos</th></tr>
+            `;
             
+            guesserRanking.forEach((r, i) => {
+                let medal = "";
+                if (i === 0) medal = "🥇 ";
+                if (i === 1) medal = "🥈 ";
+                if (i === 2) medal = "🥉 ";
+                html += `<tr><td>${i + 1}</td><td>${medal}${r.name}</td><td>${r.score}</td></tr>`;
+            });
             html += `</table>`;
             
-            // Also show guessing scores?
-            // Maybe separate table or combined? User asked for "Best Present Giver".
-            
+            // Detailed History
+            html += `<h3 style="margin-top: 30px;">Historial de Regalos</h3><div style="text-align: left; font-size: 0.9rem;">`;
+            gameHistory.forEach(round => {
+                html += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+                        <strong>${round.giver} ➔ ${round.target}</strong><br>
+                        Puntuación: ${round.scores.total.toFixed(1)} (Orig: ${round.scores.orig.toFixed(1)}, Ade: ${round.scores.fit.toFixed(1)}, Esf: ${round.scores.eff.toFixed(1)})
+                    </div>
+                `;
+            });
+            html += `</div>`;
+
             document.getElementById('leaderboard-container').innerHTML = html;
             showScreen('game-over');
         }
@@ -938,6 +952,18 @@
                 document.getElementById('vote-summary').innerHTML = summaryText;
                 document.getElementById('vote-target-name').innerText = data.target;
 
+                // Hide "I am giver" if I am the target
+                if (myName === data.target) {
+                    document.getElementById('giver-checkbox-container').style.display = 'none';
+                } else {
+                    document.getElementById('giver-checkbox-container').style.display = 'block';
+                }
+                
+                // Reset form
+                document.getElementById('is-giver-check').checked = false;
+                document.getElementById('guess-container').style.display = 'block';
+                document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+
                 showScreen('player-vote');
             } else if (data.type === 'REVEAL_AND_RATE') {
                 // Show result of guess
@@ -967,22 +993,49 @@
             }
         }
 
-        function submitVote() {
-            const choice = document.getElementById('vote-select').value;
-            if (!choice) return;
-            
-            conn.send({ type: 'VOTE', guess: choice });
-            showScreen('player-wait');
+        function toggleGuessInput(checkbox) {
+            const guessContainer = document.getElementById('guess-container');
+            if (checkbox.checked) {
+                guessContainer.style.display = 'none';
+            } else {
+                guessContainer.style.display = 'block';
+            }
         }
-        
-        function submitRating() {
-            const orig = document.getElementById('score-orig').value;
-            const fit = document.getElementById('score-fit').value;
-            const eff = document.getElementById('score-eff').value;
+
+        function submitVoteAndRate() {
+            const isGiver = document.getElementById('is-giver-check').checked;
+            let choice = document.getElementById('vote-select').value;
+            
+            // If I am the giver, I don't guess (or my guess is ignored/null)
+            if (isGiver) {
+                choice = "SELF"; 
+            } else {
+                if (!choice) {
+                    alert("Por favor selecciona quién crees que fue.");
+                    return;
+                }
+            }
+            
+            // Get Ratings
+            const getRating = (name) => {
+                const el = document.querySelector(`input[name="${name}"]:checked`);
+                return el ? el.value : "0";
+            };
+            
+            const orig = getRating('orig');
+            const fit = getRating('fit');
+            const eff = getRating('eff');
+            
+            if (orig === "0" || fit === "0" || eff === "0") {
+                alert("Por favor puntúa todos los aspectos (Originalidad, Adecuación, Esfuerzo).");
+                return;
+            }
             
             conn.send({ 
-                type: 'RATING', 
-                scores: { orig, fit, eff } 
+                type: 'VOTE_AND_RATE', 
+                guess: choice,
+                ratings: { orig, fit, eff },
+                isGiver: isGiver
             });
             
             showScreen('player-wait');
