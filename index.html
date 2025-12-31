@@ -212,17 +212,26 @@
         <!-- Host Wheel -->
         <div id="host-wheel" class="screen">
             <h2>¡Gira las Ruletas!</h2>
-            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-                <div style="position: relative; width: 300px;">
+            <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+                
+                <!-- Player Wheel -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
                     <h3>Jugador</h3>
-                    <div class="pointer"></div>
-                    <canvas id="wheel-canvas-names" width="300" height="300"></canvas>
+                    <div style="position: relative; width: 300px; height: 300px;">
+                        <div class="pointer"></div>
+                        <canvas id="wheel-canvas-names" width="300" height="300" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                    </div>
                 </div>
-                <div style="position: relative; width: 300px;">
+
+                <!-- Challenge Wheel -->
+                <div style="display: flex; flex-direction: column; align-items: center;">
                     <h3>Desafío</h3>
-                    <div class="pointer"></div>
-                    <canvas id="wheel-canvas-actions" width="300" height="300"></canvas>
+                    <div style="position: relative; width: 300px; height: 300px;">
+                        <div class="pointer"></div>
+                        <canvas id="wheel-canvas-actions" width="300" height="300" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
+                    </div>
                 </div>
+
             </div>
             <br>
             <button id="spin-btn" onclick="spinBothWheels()">GIRAR AMBAS</button>
