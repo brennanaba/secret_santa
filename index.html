@@ -192,7 +192,7 @@
 
     <div class="container">
         <!-- Role Selection -->
-        <div id="role-selection" class="screen active">
+        <div id="role-selection" class="screen">
             <h1>🎅 Fiesta del Amigo Invisible 🎄</h1>
             <button class="big-btn" onclick="initHost()">CREAR PARTIDA</button>
             <button class="big-btn" onclick="showJoinScreen()">UNIRSE A PARTIDA</button>
@@ -627,14 +627,18 @@
 
         // --- INITIALIZATION ---
         // Check for room code in URL
-        window.addEventListener('load', () => {
+        (function init() {
             const urlParams = new URLSearchParams(window.location.search);
             const roomParam = urlParams.get('room');
             if (roomParam) {
-                document.getElementById('join-code').value = roomParam;
+                const joinCodeInput = document.getElementById('join-code');
+                joinCodeInput.value = roomParam;
+                joinCodeInput.style.display = 'none';
                 showScreen('player-join');
+            } else {
+                showScreen('role-selection');
             }
-        });
+        })();
 
     </script>
 </body>
