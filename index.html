@@ -183,8 +183,32 @@
             margin-top: 20px;
         }
 
-        .correct { background-color: var(--christmas-green); }
-        .wrong { background-color: var(--christmas-red); }
+        .slider-container {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--christmas-gold);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        th {
+            color: var(--christmas-gold);
+        }
 
     </style>
 </head>
@@ -243,14 +267,39 @@
             <p>Objetivo: <span id="target-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
             <div class="vote-count" id="vote-count">0</div>
             <p>Votos Recibidos</p>
-            <button onclick="revealAndScore()">Revelar y Puntuar</button>
+            
+            <div style="margin: 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px;">
+                <h3>¿Quién fue el Amigo Invisible?</h3>
+                <select id="real-giver-select">
+                    <option value="" disabled selected>Selecciona al regalador real...</option>
+                </select>
+            </div>
+
+            <button onclick="revealAndRate()">Revelar y Puntuar</button>
+        </div>
+
+        <!-- Host Rating Wait -->
+        <div id="host-rating-wait" class="screen">
+            <h2>Puntuando Regalo...</h2>
+            <p>Regalador: <span id="rating-giver-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
+            <div class="vote-count" id="rating-count">0</div>
+            <p>Puntuaciones Recibidas</p>
+            <button onclick="finishRound()">Finalizar Ronda</button>
         </div>
 
         <!-- Host Results -->
         <div id="host-results" class="screen">
             <h2>Resultados de la Ronda</h2>
             <div id="round-summary"></div>
+            <div id="round-scores" style="margin-top: 20px; font-size: 0.9rem;"></div>
             <button onclick="nextRound()">Siguiente Ronda</button>
+        </div>
+
+        <!-- Game Over Leaderboard -->
+        <div id="game-over" class="screen">
+            <h1>🏆 Resultados Finales 🏆</h1>
+            <div id="leaderboard-container"></div>
+            <button onclick="location.reload()">Nueva Partida</button>
         </div>
 
 
@@ -304,6 +353,38 @@
             <button onclick="submitVote()">Enviar Voto</button>
         </div>
 
+        <!-- Player Rating -->
+        <div id="player-rating" class="screen">
+            <h2>Puntuar Regalo</h2>
+            <p>El regalo fue de: <span id="rating-giver-display" style="font-weight: bold; color: var(--christmas-gold);"></span></p>
+            
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Originalidad</span>
+                    <span id="val-orig">5</span>
+                </div>
+                <input type="range" id="score-orig" min="1" max="10" value="5" oninput="document.getElementById('val-orig').innerText = this.value">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Adecuación</span>
+                    <span id="val-fit">5</span>
+                </div>
+                <input type="range" id="score-fit" min="1" max="10" value="5" oninput="document.getElementById('val-fit').innerText = this.value">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Esfuerzo</span>
+                    <span id="val-eff">5</span>
+                </div>
+                <input type="range" id="score-eff" min="1" max="10" value="5" oninput="document.getElementById('val-eff').innerText = this.value">
+            </div>
+
+            <button onclick="submitRating()">Enviar Puntuación</button>
+        </div>
+
         <!-- Player Result -->
         <div id="player-result" class="screen">
             <h2 id="result-title"></h2>
@@ -326,6 +407,10 @@
         let currentTarget = "";
         let currentChallenge = "";
         let votes = {}; // { playerName: votedName }
+        let ratings = []; // Array of { orig, fit, eff }
+        let realGiver = "";
+        let giftScores = {}; // { PlayerName: { total: 0, count: 0, details: [] } }
+        
         let challenges = [
             { title: "Clásico", desc: "Abre tu regalo normalmente." },
             { title: "Zona Segura", desc: "¡Sin desafío! Abre tranquilo." },
@@ -407,6 +492,9 @@
             } else if (data.type === 'VOTE') {
                 votes[getPlayerName(c)] = data.guess;
                 document.getElementById('vote-count').innerText = Object.keys(votes).length;
+            } else if (data.type === 'RATING') {
+                ratings.push(data.scores);
+                document.getElementById('rating-count').innerText = ratings.length;
             }
         }
 
@@ -559,9 +647,24 @@
 
         function startVotingRound(target, challenge) {
             votes = {};
+            ratings = [];
+            realGiver = "";
+            
             document.getElementById('vote-count').innerText = "0";
             document.getElementById('target-name').innerText = target;
             
+            // Populate Giver Select
+            const giverSelect = document.getElementById('real-giver-select');
+            giverSelect.innerHTML = '<option value="" disabled selected>Selecciona al regalador real...</option>';
+            players.forEach(p => {
+                if (p !== target) { // Can't give to self usually
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.innerText = p;
+                    giverSelect.appendChild(opt);
+                }
+            });
+
             // Broadcast to players
             broadcast({ 
                 type: 'VOTE_START', 
@@ -577,16 +680,58 @@
             connections.forEach(p => p.conn.send(msg));
         }
 
-        function revealAndScore() {
+        function revealAndRate() {
+            const select = document.getElementById('real-giver-select');
+            realGiver = select.value;
+            
+            if (!realGiver) {
+                alert("Por favor selecciona quién fue el regalador real.");
+                return;
+            }
+
+            // Calculate Guessing Scores
             connections.forEach(p => {
                 const guess = votes[p.name];
-                const correct = guess === currentTarget;
+                const correct = guess === realGiver;
                 if (correct) p.score += 10;
+                
+                // Send Reveal Info
                 p.conn.send({ 
-                    type: 'RESULT', 
-                    title: correct ? '¡Correcto!' : '¡Incorrecto!', 
-                    message: correct ? `¡Era ${currentTarget}!` : `Era ${currentTarget}, no ${guess}.`
+                    type: 'REVEAL_AND_RATE', 
+                    giver: realGiver,
+                    correct: correct,
+                    message: correct ? `¡Acertaste! Fue ${realGiver}.` : `Fue ${realGiver}, no ${guess}.`
                 });
+            });
+
+            document.getElementById('rating-giver-name').innerText = realGiver;
+            document.getElementById('rating-count').innerText = "0";
+            showScreen('host-rating-wait');
+        }
+
+        function finishRound() {
+            // Calculate Average Ratings
+            let avgOrig = 0, avgFit = 0, avgEff = 0;
+            if (ratings.length > 0) {
+                avgOrig = ratings.reduce((sum, r) => sum + parseInt(r.orig), 0) / ratings.length;
+                avgFit = ratings.reduce((sum, r) => sum + parseInt(r.fit), 0) / ratings.length;
+                avgEff = ratings.reduce((sum, r) => sum + parseInt(r.eff), 0) / ratings.length;
+            }
+            
+            const totalRoundScore = avgOrig + avgFit + avgEff;
+            
+            // Store Scores
+            if (!giftScores[realGiver]) {
+                giftScores[realGiver] = { total: 0, count: 0, details: [] };
+            }
+            giftScores[realGiver].total += totalRoundScore;
+            giftScores[realGiver].count += 1;
+            giftScores[realGiver].details.push({
+                target: currentTarget,
+                orig: avgOrig.toFixed(1),
+                fit: avgFit.toFixed(1),
+                eff: avgEff.toFixed(1),
+                total: totalRoundScore.toFixed(1)
             });
 
             let challengeDisplay = currentChallenge;
@@ -596,25 +741,78 @@
 
             document.getElementById('round-summary').innerHTML = `
                 <h3>El objetivo era: ${currentTarget}</h3>
-                <p style="font-size: 1.5rem; color: var(--christmas-gold);">Desafío: ${challengeDisplay}</p>
+                <p>Regalado por: <strong>${realGiver}</strong></p>
+                <p style="font-size: 1.2rem; color: var(--christmas-gold);">Desafío: ${challengeDisplay}</p>
+            `;
+            
+            document.getElementById('round-scores').innerHTML = `
+                <h4>Puntuación del Regalo</h4>
+                <p>Originalidad: ${avgOrig.toFixed(1)} / 10</p>
+                <p>Adecuación: ${avgFit.toFixed(1)} / 10</p>
+                <p>Esfuerzo: ${avgEff.toFixed(1)} / 10</p>
+                <p style="font-size: 1.2rem; font-weight: bold;">Total: ${totalRoundScore.toFixed(1)}</p>
             `;
             
             // Remove player from wheel
             remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
             
+            // Broadcast Round End
+            broadcast({ type: 'ROUND_END' });
+
             showScreen('host-results');
         }
 
         function nextRound() {
             if (remainingPlayers.length === 0) {
-                alert("¡Juego Terminado!");
-                // Reset
-                remainingPlayers = [...players];
+                showLeaderboard();
+            } else {
+                document.getElementById('spin-btn').disabled = false;
+                showScreen('host-wheel');
+                drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
+                drawWheel('wheel-canvas-actions', challenges, rotationActions);
             }
-            document.getElementById('spin-btn').disabled = false;
-            showScreen('host-wheel');
-            drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
-            drawWheel('wheel-canvas-actions', challenges, rotationActions);
+        }
+
+        function showLeaderboard() {
+            // Calculate Rankings
+            const ranking = Object.keys(giftScores).map(name => {
+                const data = giftScores[name];
+                // If multiple gifts, average the totals? Or sum? Usually sum if everyone gives 1.
+                // Assuming 1 gift per person.
+                return { name: name, score: data.total };
+            }).sort((a, b) => b.score - a.score);
+
+            let html = `
+                <table>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Nombre</th>
+                        <th>Puntos</th>
+                    </tr>
+            `;
+            
+            ranking.forEach((r, i) => {
+                let medal = "";
+                if (i === 0) medal = "🥇 ";
+                if (i === 1) medal = "🥈 ";
+                if (i === 2) medal = "🥉 ";
+                
+                html += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${medal}${r.name}</td>
+                        <td>${r.score.toFixed(1)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `</table>`;
+            
+            // Also show guessing scores?
+            // Maybe separate table or combined? User asked for "Best Present Giver".
+            
+            document.getElementById('leaderboard-container').innerHTML = html;
+            showScreen('game-over');
         }
 
 
@@ -725,7 +923,28 @@
                 document.getElementById('vote-target-name').innerText = data.target;
 
                 showScreen('player-vote');
+            } else if (data.type === 'REVEAL_AND_RATE') {
+                // Show result of guess
+                // Maybe show a toast or small alert? Or just update the UI
+                // We transition to Rating Screen
+                document.getElementById('rating-giver-display').innerText = data.giver;
+                
+                // Reset sliders
+                document.getElementById('score-orig').value = 5;
+                document.getElementById('score-fit').value = 5;
+                document.getElementById('score-eff').value = 5;
+                document.getElementById('val-orig').innerText = "5";
+                document.getElementById('val-fit').innerText = "5";
+                document.getElementById('val-eff').innerText = "5";
+                
+                showScreen('player-rating');
+                
+                // Optional: Show if they guessed right
+                // alert(data.message); // Alert is annoying, maybe just text on screen
+            } else if (data.type === 'ROUND_END') {
+                showScreen('player-wait');
             } else if (data.type === 'RESULT') {
+                // Legacy result handler, replaced by REVEAL_AND_RATE flow
                 document.getElementById('result-title').innerText = data.title;
                 document.getElementById('result-message').innerText = data.message;
                 showScreen('player-result');
@@ -737,6 +956,19 @@
             if (!choice) return;
             
             conn.send({ type: 'VOTE', guess: choice });
+            showScreen('player-wait');
+        }
+        
+        function submitRating() {
+            const orig = document.getElementById('score-orig').value;
+            const fit = document.getElementById('score-fit').value;
+            const eff = document.getElementById('score-eff').value;
+            
+            conn.send({ 
+                type: 'RATING', 
+                scores: { orig, fit, eff } 
+            });
+            
             showScreen('player-wait');
         }
 
