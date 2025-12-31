@@ -37,7 +37,7 @@
             padding: 2rem;
             border-radius: 20px;
             border: 2px solid var(--christmas-gold);
-            box-shadow: 0 0 20px rgba(248, 178, 41, 0.3);
+            box-shadow: 0 0 20px rgba(248,178,41,0.3);
         }
 
         h1, h2, h3 {
@@ -239,6 +239,73 @@
             text-shadow: 0 0 10px var(--christmas-gold);
         }
 
+        /* --- RESPONSIVE & MOBILE STYLES --- */
+        .wheels-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap; /* Stack on mobile */
+            padding-bottom: 10px;
+        }
+
+        .wheel-column {
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+        }
+
+        .wheel-canvas-container {
+            position: relative; 
+            width: 220px; 
+            height: 220px;
+            transition: transform 0.3s;
+        }
+
+        .giver-container {
+            margin-bottom: 15px; 
+            background: rgba(255,255,255,0.1); 
+            padding: 15px; 
+            border-radius: 10px;
+            display: flex;
+            justify-content: center; /* Center the checkbox group */
+        }
+
+        .giver-label {
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            cursor: pointer;
+            text-align: left;
+            max-width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+                padding: 1rem;
+            }
+
+            .wheels-wrapper {
+                gap: 5px;
+            }
+
+            /* Make wheels slightly smaller on mobile to fit better */
+            .wheel-canvas-container {
+                transform: scale(0.9);
+                margin: -10px 0; /* Reduce gap caused by scaling */
+            }
+            
+            .wheel-column h3 {
+                font-size: 1rem;
+                margin: 5px 0;
+            }
+
+            /* Adjust checkbox text size */
+            .giver-label span {
+                font-size: 1rem !important;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -265,21 +332,21 @@
         <!-- Host Wheel -->
         <div id="host-wheel" class="screen">
             <h2>¡Gira las Ruletas!</h2>
-            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: nowrap; overflow-x: auto;">
+            <div class="wheels-wrapper">
                 
                 <!-- Player Wheel -->
-                <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="wheel-column">
                     <h3>Jugador</h3>
-                    <div style="position: relative; width: 220px; height: 220px;">
+                    <div class="wheel-canvas-container">
                         <div class="pointer"></div>
                         <canvas id="wheel-canvas-names" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
                 </div>
 
                 <!-- Challenge Wheel -->
-                <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="wheel-column">
                     <h3>Desafío</h3>
-                    <div style="position: relative; width: 220px; height: 220px;">
+                    <div class="wheel-canvas-container">
                         <div class="pointer"></div>
                         <canvas id="wheel-canvas-actions" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
@@ -336,17 +403,17 @@
         <!-- Player Wheel -->
         <div id="player-wheel" class="screen">
             <h2>¡Girando!</h2>
-            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: nowrap; overflow-x: auto;">
-                <div style="display: flex; flex-direction: column; align-items: center;">
+            <div class="wheels-wrapper">
+                <div class="wheel-column">
                     <h3>Jugador</h3>
-                    <div style="position: relative; width: 220px; height: 220px;">
+                    <div class="wheel-canvas-container">
                         <div class="pointer"></div>
                         <canvas id="wheel-canvas-names-player" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
                 </div>
-                <div style="display: flex; flex-direction: column; align-items: center;">
+                <div class="wheel-column">
                     <h3>Desafío</h3>
-                    <div style="position: relative; width: 220px; height: 220px;">
+                    <div class="wheel-canvas-container">
                         <div class="pointer"></div>
                         <canvas id="wheel-canvas-actions-player" width="220" height="220" style="border-radius: 50%; border: 5px solid var(--christmas-gold); background: rgba(255,255,255,0.1);"></canvas>
                     </div>
@@ -361,8 +428,8 @@
             
             <h3>1. ¿Quién crees que fue?</h3>
             
-            <div id="giver-checkbox-container" style="margin-bottom: 15px; text-align: left; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <div id="giver-checkbox-container" class="giver-container">
+                <label class="giver-label">
                     <input type="checkbox" id="is-giver-check" onchange="toggleGuessInput(this)">
                     <span style="font-size: 1.1rem; font-weight: bold; color: var(--christmas-gold);">🎁 ¡Fui yo! (Yo regalé esto)</span>
                 </label>
