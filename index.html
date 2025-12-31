@@ -217,6 +217,30 @@
             text-shadow: none;
         }
 
+        /* Snow Effect */
+        .snowflake {
+            position: fixed;
+            top: -20px;
+            color: white;
+            font-size: 1em;
+            font-family: Arial;
+            text-shadow: 0 0 1px #000;
+            user-select: none;
+            z-index: 9999;
+            pointer-events: none;
+            animation-name: fall;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(100vh); }
+        }
+
+        h1 {
+            font-size: 1.8rem;
+        }
+
         /* --- RESPONSIVE & MOBILE STYLES --- */
         .wheels-wrapper {
             display: flex;
@@ -238,11 +262,15 @@
             height: 220px;
             transition: transform 0.3s;
         }
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.3rem;
+            }
 
-        .giver-container {
-            margin-bottom: 15px; 
-            background: rgba(0,0,0,0.03); 
-            padding: 15px; 
+            .container {
+                width: 95%;
+                padding: 1rem;
+            }adding: 15px; 
             border-radius: 4px;
             display: flex;
             justify-content: center; /* Center the checkbox group */
@@ -619,10 +647,10 @@
 
         // Wheel Logic
         let rotationNames = 0;
-        let rotationActions = 0;
-
-        function drawWheel(canvasId, segments, rotation) {
-            const canvas = document.getElementById(canvasId);
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 10px Arial";
+                ctx.textAlign = "right";lementById(canvasId);
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
@@ -1123,12 +1151,31 @@
                 document.getElementById('role-selection').classList.remove('active');
                 document.getElementById('role-selection').style.display = 'none';
 
-                const joinCodeInput = document.getElementById('join-code');
-                joinCodeInput.value = roomParam;
-                joinCodeInput.style.display = 'none';
-                showScreen('player-join');
             } else {
                 showScreen('role-selection');
+            }
+        })();
+
+        // Snow Effect Logic
+        function createSnow() {
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            snowflake.innerText = '❄';
+            snowflake.style.left = Math.random() * 100 + 'vw';
+            snowflake.style.animationDuration = Math.random() * 3 + 2 + 's';
+            snowflake.style.opacity = Math.random();
+            snowflake.style.fontSize = Math.random() * 10 + 10 + 'px';
+            
+            document.body.appendChild(snowflake);
+            
+            setTimeout(() => {
+                snowflake.remove();
+            }, 5000);
+        }
+        
+        setInterval(createSnow, 200);
+
+    </script>   showScreen('role-selection');
             }
         })();
 
