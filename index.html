@@ -967,15 +967,19 @@
                     msg = "No se encontró la sala. Verifica el código o que el anfitrión esté conectado.";
                 } else if (err.type === 'network') {
                     msg = "Error de red. Intenta conectarte al WiFi.";
+                } else if (err.type === 'peer-destroyed') {
+                    msg = "La conexión se perdió. Recarga la página.";
                 } else {
-                    msg = err.type;
+                    msg = err.type + ": " + err.message;
                 }
-                alert("Error: " + msg);
-                document.getElementById('join-status').innerText = "Error de conexión";
+                alert("Error: " + msg + "\n\nIntenta recargar la página o usar WiFi si estás en datos.");
+                document.getElementById('join-status').innerText = "Error de conexión. Intenta de nuevo.";
             });
 
             peer.on('open', (id) => {
-                conn = peer.connect(roomCode);
+                conn = peer.connect(roomCode, {
+                    serialization: 'json'
+                });
                 
                 conn.on('open', () => {
                     document.getElementById('join-status').innerText = "¡Conectado! Uniéndose...";
