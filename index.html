@@ -210,6 +210,35 @@
             color: var(--christmas-gold);
         }
 
+        /* Star Rating */
+        .rating-group {
+            margin: 15px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .stars {
+            display: inline-flex;
+            flex-direction: row-reverse;
+            justify-content: center;
+            gap: 5px;
+        }
+        .stars input {
+            display: none;
+        }
+        .stars label {
+            font-size: 2rem;
+            color: #888;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .stars input:checked ~ label,
+        .stars label:hover,
+        .stars label:hover ~ label {
+            color: var(--christmas-gold);
+            text-shadow: 0 0 10px var(--christmas-gold);
+        }
+
     </style>
 </head>
 <body>
@@ -266,7 +295,7 @@
             <h2>Votación en Curso...</h2>
             <p>Objetivo: <span id="target-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
             <div class="vote-count" id="vote-count">0</div>
-            <p>Votos Recibidos</p>
+            <p>Votos y Puntuaciones Recibidas</p>
             
             <div style="margin: 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px;">
                 <h3>¿Quién fue el Amigo Invisible?</h3>
@@ -275,24 +304,7 @@
                 </select>
             </div>
 
-            <button onclick="revealAndRate()">Revelar y Puntuar</button>
-        </div>
-
-        <!-- Host Rating Wait -->
-        <div id="host-rating-wait" class="screen">
-            <h2>Puntuando Regalo...</h2>
-            <p>Regalador: <span id="rating-giver-name" style="color: var(--christmas-gold); font-weight: bold;"></span></p>
-            <div class="vote-count" id="rating-count">0</div>
-            <p>Puntuaciones Recibidas</p>
-            <button onclick="finishRound()">Finalizar Ronda</button>
-        </div>
-
-        <!-- Host Results -->
-        <div id="host-results" class="screen">
-            <h2>Resultados de la Ronda</h2>
-            <div id="round-summary"></div>
-            <div id="round-scores" style="margin-top: 20px; font-size: 0.9rem;"></div>
-            <button onclick="nextRound()">Siguiente Ronda</button>
+            <button onclick="finishRound()">Guardar y Siguiente Ronda</button>
         </div>
 
         <!-- Game Over Leaderboard -->
@@ -344,45 +356,50 @@
 
         <!-- Player Vote -->
         <div id="player-vote" class="screen">
-            <h2>¿Quién es?</h2>
+            <h2>Votación y Puntuación</h2>
             <div id="vote-summary" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; margin-bottom: 20px;"></div>
-            <p>¿Quién crees que le regaló a <span id="vote-target-name" style="font-weight: bold; color: var(--christmas-gold);"></span>?</p>
+            
+            <h3>1. ¿Quién crees que fue?</h3>
             <select id="vote-select">
                 <option value="" disabled selected>Selecciona un jugador...</option>
             </select>
-            <button onclick="submitVote()">Enviar Voto</button>
-        </div>
 
-        <!-- Player Rating -->
-        <div id="player-rating" class="screen">
-            <h2>Puntuar Regalo</h2>
-            <p>El regalo fue de: <span id="rating-giver-display" style="font-weight: bold; color: var(--christmas-gold);"></span></p>
+            <h3>2. Puntúa el Regalo</h3>
             
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Originalidad</span>
-                    <span id="val-orig">5</span>
+            <div class="rating-group">
+                <p>Originalidad</p>
+                <div class="stars">
+                    <input type="radio" id="orig-5" name="orig" value="5"><label for="orig-5">★</label>
+                    <input type="radio" id="orig-4" name="orig" value="4"><label for="orig-4">★</label>
+                    <input type="radio" id="orig-3" name="orig" value="3"><label for="orig-3">★</label>
+                    <input type="radio" id="orig-2" name="orig" value="2"><label for="orig-2">★</label>
+                    <input type="radio" id="orig-1" name="orig" value="1"><label for="orig-1">★</label>
                 </div>
-                <input type="range" id="score-orig" min="1" max="10" value="5" oninput="document.getElementById('val-orig').innerText = this.value">
             </div>
 
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Adecuación</span>
-                    <span id="val-fit">5</span>
+            <div class="rating-group">
+                <p>Adecuación</p>
+                <div class="stars">
+                    <input type="radio" id="fit-5" name="fit" value="5"><label for="fit-5">★</label>
+                    <input type="radio" id="fit-4" name="fit" value="4"><label for="fit-4">★</label>
+                    <input type="radio" id="fit-3" name="fit" value="3"><label for="fit-3">★</label>
+                    <input type="radio" id="fit-2" name="fit" value="2"><label for="fit-2">★</label>
+                    <input type="radio" id="fit-1" name="fit" value="1"><label for="fit-1">★</label>
                 </div>
-                <input type="range" id="score-fit" min="1" max="10" value="5" oninput="document.getElementById('val-fit').innerText = this.value">
             </div>
 
-            <div class="slider-container">
-                <div class="slider-label">
-                    <span>Esfuerzo</span>
-                    <span id="val-eff">5</span>
+            <div class="rating-group">
+                <p>Esfuerzo</p>
+                <div class="stars">
+                    <input type="radio" id="eff-5" name="eff" value="5"><label for="eff-5">★</label>
+                    <input type="radio" id="eff-4" name="eff" value="4"><label for="eff-4">★</label>
+                    <input type="radio" id="eff-3" name="eff" value="3"><label for="eff-3">★</label>
+                    <input type="radio" id="eff-2" name="eff" value="2"><label for="eff-2">★</label>
+                    <input type="radio" id="eff-1" name="eff" value="1"><label for="eff-1">★</label>
                 </div>
-                <input type="range" id="score-eff" min="1" max="10" value="5" oninput="document.getElementById('val-eff').innerText = this.value">
             </div>
 
-            <button onclick="submitRating()">Enviar Puntuación</button>
+            <button onclick="submitVoteAndRate()">Enviar Todo</button>
         </div>
 
         <!-- Player Result -->
@@ -406,10 +423,8 @@
         let players = []; // List of names
         let currentTarget = "";
         let currentChallenge = "";
-        let votes = {}; // { playerName: votedName }
-        let ratings = []; // Array of { orig, fit, eff }
-        let realGiver = "";
-        let giftScores = {}; // { PlayerName: { total: 0, count: 0, details: [] } }
+        let currentRoundVotes = []; // Array of { name, guess, ratings: {orig, fit, eff} }
+        let gameHistory = []; // Array of { target, giver, votes: [], scores: {orig, fit, eff, total} }
         
         let challenges = [
             { title: "Clásico", desc: "Abre tu regalo normalmente." },
@@ -489,12 +504,13 @@
                 // Send current player list to everyone so they know who is in game? 
                 // Ideally we just confirm join.
                 c.send({ type: 'JOIN_CONFIRM' });
-            } else if (data.type === 'VOTE') {
-                votes[getPlayerName(c)] = data.guess;
-                document.getElementById('vote-count').innerText = Object.keys(votes).length;
-            } else if (data.type === 'RATING') {
-                ratings.push(data.scores);
-                document.getElementById('rating-count').innerText = ratings.length;
+            } else if (data.type === 'VOTE_AND_RATE') {
+                currentRoundVotes.push({
+                    name: getPlayerName(c),
+                    guess: data.guess,
+                    ratings: data.ratings
+                });
+                document.getElementById('vote-count').innerText = currentRoundVotes.length;
             }
         }
 
