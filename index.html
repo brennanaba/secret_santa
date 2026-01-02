@@ -321,7 +321,10 @@
             }
         }
 
-    </style>ss="container">
+    </style>
+</head>
+<body>
+    <div class="container">
         <!-- Role Selection -->
         <div id="role-selection" class="screen">
             <h1>🎅 Fiesta del Amigo Invisible 🎄</h1>
@@ -615,11 +618,17 @@
                     }
                 } else {
                     // New Player
+                    if (currentPhase !== 'LOBBY') {
+                        c.send({ type: 'ERROR', message: 'El juego ya ha comenzado. Solo se permiten reconexiones.' });
+                        return;
+                    }
+
                     const newPlayer = { conn: c, name: data.name, score: 0, connected: true };
                     connections.push(newPlayer);
                     c.send({ type: 'JOIN_CONFIRM' });
                 }
                 updatePlayerList();
+                checkVotingProgress();
             } else if (data.type === 'VOTE_AND_RATE') {
                 // Check if player already voted (update if so, or just push)
                 // Simple implementation: just push
@@ -636,29 +645,9 @@
         function checkVotingProgress() {
             if (currentPhase !== 'VOTING') return;
 
-        function startGame() {
-            if (connections.length < 1) {
-                alert("¡Se necesita al menos 1 jugador para probar!");
-                return; 
-            }
-            currentPhase = 'WHEEL';
-            players = connections.map(p => p.name);
-            remainingPlayers = [...players];
-            showScreen('host-wheel');
-            drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
-            drawWheel('wheel-canvas-actions', challenges, rotationActions);
-        }       const status = p.connected ? '🟢' : '🔴';
-                return `<li>${status} ${p.name}</li>`;
-            }).join('');
-        }
-
-        function startGame() {
-            if (connections.length < 1) {
-                alert("¡Se necesita al menos 1 jugador para probar!");
-                return; 
-            }
-            currentPhase = 'WHEEL';
-            players = connections.map(p => p.name);
+            const count = currentRoundVotes.length;
+            const connectedTotal = connections.filter(p => p.connected).length;
+            
             const vrc = document.getElementById('votes-received-count');
             if(vrc) vrc.innerText = count;
             const tpc = document.getElementById('total-players-count');
@@ -671,17 +660,14 @@
                 document.getElementById('finish-round-btn').disabled = true;
                 document.getElementById('host-status-msg').innerText = `Esperando a ${connectedTotal - count} jugadores...`;
             }
-        }   }
-        }
-
-        function getPlayerName(c) {
-            const p = connections.find(x => x.conn === c);
-            return p ? p.name : 'Desconocido';
         }
 
         function updatePlayerList() {
             const list = document.getElementById('player-list');
-            list.innerHTML = connections.map(p => `<li>${p.name}</li>`).join('');
+            list.innerHTML = connections.map(p => {
+                const status = p.connected ? '🟢' : '🔴';
+                return `<li>${status} ${p.name}</li>`;
+            }).join('');
         }
 
         function startGame() {
@@ -689,12 +675,20 @@
                 alert("¡Se necesita al menos 1 jugador para probar!");
                 return; 
             }
+            currentPhase = 'WHEEL';
             players = connections.map(p => p.name);
             remainingPlayers = [...players];
             showScreen('host-wheel');
             drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
             drawWheel('wheel-canvas-actions', challenges, rotationActions);
         }
+
+        function getPlayerName(c) {
+            const p = connections.find(x => x.conn === c);
+            return p ? p.name : 'Desconocido';
+        }
+
+
 
         // Wheel Logic
         let rotationNames = 0;
@@ -787,18 +781,15 @@
                      }, 1000);
                  }
              }
-        function startVotingRound(target, challenge) {
-            currentPhase = 'VOTING';
-            currentRoundVotes = [];
-            
-            // document.getElementById('vote-count').innerText = "0";
-            const vrc = document.getElementById('votes-received-count');
-            if(vrc) vrc.innerText = "0";
-            const tpc = document.getElementById('total-players-count');
-            if(tpc) tpc.innerText = connections.filter(p => p.connected).length;
+        }
 
-            document.getElementById('target-name').innerText = target;
-                
+        function spinSingleWheel(canvasId, segments, startRotation, spinAngle, duration, callback) {
+            let startTime = null;
+
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+
                 if (elapsed < duration) {
                     let t = elapsed / duration;
                     t--;
@@ -829,7 +820,7 @@
             const vrc = document.getElementById('votes-received-count');
             if(vrc) vrc.innerText = "0";
             const tpc = document.getElementById('total-players-count');
-            if(tpc) tpc.innerText = connections.length;
+            if(tpc) tpc.innerText = connections.filter(p => p.connected).length;
 
             document.getElementById('target-name').innerText = target;
             document.getElementById('finish-round-btn').disabled = true;
@@ -890,6 +881,11 @@
                     eff: avgEff,
                     total: totalRoundScore
                 }
+            });
+
+            // Remove current target from remaining players
+            remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
+
             // Broadcast Round End (Just go back to wait)
             broadcast({ type: 'ROUND_END' });
 
@@ -910,11 +906,6 @@
 
         function showLeaderboard() {
             currentPhase = 'LEADERBOARD';
-            // 1. Calculate Best Givers-actions', challenges, rotationActions);
-            }
-        }
-
-        function showLeaderboard() {
             // 1. Calculate Best Giver
             let giverScores = {};
             gameHistory.forEach(round => {
@@ -1067,6 +1058,9 @@
         function handlePlayerData(data) {
             if (data.type === 'JOIN_CONFIRM') {
                 showScreen('player-wait');
+            } else if (data.type === 'ERROR') {
+                alert(data.message);
+                showScreen('player-join');
             } else if (data.type === 'SPIN') {
                 // Show wheel screen
                 showScreen('player-wheel');
