@@ -503,6 +503,11 @@
     </div>
 
     <script>
+        window.onerror = function(msg, url, line, col, error) {
+           alert("Global Error: " + msg + "\nLine: " + line + "\nCol: " + col + "\nError: " + error);
+        };
+    </script>
+    <script>
         // --- GLOBAL STATE ---
         let peer = null;
         let conn = null; // For player
@@ -549,55 +554,62 @@
         // --- HOST LOGIC ---
 
         function initHost() {
-            isHost = true;
-            peer = new Peer(null, { 
-                debug: 2,
-                secure: true,
-                config: {
-                    'iceServers': [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' }
-                    ]
-                }
-            });
-
-            peer.on('error', (err) => {
-                console.error("Host Error:", err);
-                alert("Error del Anfitrión: " + err.type);
-            });
-
-            peer.on('open', (id) => {
-                document.getElementById('room-code-display').innerText = id;
-                const joinUrl = `https://brennanaba.github.io/secret_santa/?room=${id}`;
-                new QRCode(document.getElementById("qrcode"), {
-                    text: joinUrl,
-                    width: 128,
-                    height: 128
-                });
-                showScreen('host-lobby');
-            });
-            peer.on('connection', (c) => {
-                c.on('open', () => {
-                    // Wait for JOIN message
-                    c.on('data', (data) => handleHostData(c, data));
-                });
-                c.on('close', () => {
-                    const p = connections.find(x => x.conn === c);
-                    if (p) {
-                        p.connected = false;
-                        updatePlayerList();
-                        checkVotingProgress();
+            try {
+                console.log("initHost called");
+                isHost = true;
+                peer = new Peer(null, { 
+                    debug: 2,
+                    secure: true,
+                    config: {
+                        'iceServers': [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' },
+                            { urls: 'stun:stun3.l.google.com:19302' },
+                            { urls: 'stun:stun4.l.google.com:19302' }
+                        ]
                     }
                 });
-            });
+
+                peer.on('error', (err) => {
+                    console.error("Host Error:", err);
+                    alert("Error del Anfitrión: " + err.type);
+                });
+
+                peer.on('open', (id) => {
+                    document.getElementById('room-code-display').innerText = id;
+                    const joinUrl = `https://brennanaba.github.io/secret_santa/?room=${id}`;
+                    new QRCode(document.getElementById("qrcode"), {
+                        text: joinUrl,
+                        width: 128,
+                        height: 128
+                    });
+                    showScreen('host-lobby');
+                });
+                peer.on('connection', (c) => {
+                    c.on('open', () => {
+                        // Wait for JOIN message
+                        c.on('data', (data) => handleHostData(c, data));
+                    });
+                    c.on('close', () => {
+                        const p = connections.find(x => x.conn === c);
+                        if (p) {
+                            p.connected = false;
+                            updatePlayerList();
+                            checkVotingProgress();
+                        }
+                    });
+                });
+            } catch (e) {
+                alert("Error initializing host: " + e);
+                console.error(e);
+            }
         }
 
         function handleHostData(c, data) {
             if (data.type === 'JOIN') {
-                let existingPlayer = connections.find(p => p.name === data.name);
+                const joinedName = data.name ? data.name.trim() : "Unknown";
+                let existingPlayer = connections.find(p => p.name === joinedName);
                 
                 if (existingPlayer) {
                     // Reconnection
@@ -615,6 +627,8 @@
                                 challenge: currentChallenge,
                                 candidates: players.filter(p => p !== currentTarget) 
                             });
+                        } else {
+                            c.send({ type: 'ROUND_END' });
                         }
                     } else {
                         c.send({ type: 'ROUND_END' }); 
@@ -626,7 +640,7 @@
                         return;
                     }
 
-                    const newPlayer = { conn: c, name: data.name, score: 0, connected: true };
+                    const newPlayer = { conn: c, name: joinedName, score: 0, connected: true };
                     connections.push(newPlayer);
                     c.send({ type: 'JOIN_CONFIRM' });
                 }
@@ -817,6 +831,7 @@
         }
 
         function startVotingRound(target, challenge) {
+            currentPhase = 'VOTING';
             currentRoundVotes = [];
             
             // document.getElementById('vote-count').innerText = "0";
@@ -990,7 +1005,7 @@
         }
 
         function joinGame() {
-            myName = document.getElementById('player-name').value;
+            myName = document.getElementById('player-name').value.trim();
             const roomCode = document.getElementById('join-code').value;
             
             if (!myName || !roomCode) {
