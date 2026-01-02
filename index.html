@@ -522,6 +522,7 @@
         let currentChallenge = "";
         let currentRoundVotes = []; // Array of { name, guess, ratings: {orig, fit, eff}, isGiver }
         let gameHistory = []; // Array of { target, giver, votes: [], scores: {orig, fit, eff, total} }
+        let lastLeaderboardHtml = ""; // Store leaderboard for reconnections
         
         let challenges = [
             { title: "Clásico", desc: "Abre tu regalo normalmente." },
@@ -630,6 +631,8 @@
                         } else {
                             c.send({ type: 'ROUND_END' });
                         }
+                    } else if (currentPhase === 'LEADERBOARD') {
+                        c.send({ type: 'LEADERBOARD', html: lastLeaderboardHtml });
                     } else {
                         c.send({ type: 'ROUND_END' }); 
                     }
@@ -647,14 +650,21 @@
                 updatePlayerList();
                 checkVotingProgress();
             } else if (data.type === 'VOTE_AND_RATE') {
-                // Check if player already voted (update if so, or just push)
-                // Simple implementation: just push
-                currentRoundVotes.push({
-                    name: getPlayerName(c),
+                const pName = getPlayerName(c);
+                const existingVoteIndex = currentRoundVotes.findIndex(v => v.name === pName);
+                
+                const voteData = {
+                    name: pName,
                     guess: data.guess,
                     ratings: data.ratings,
                     isGiver: data.isGiver
-                });
+                };
+
+                if (existingVoteIndex >= 0) {
+                    currentRoundVotes[existingVoteIndex] = voteData;
+                } else {
+                    currentRoundVotes.push(voteData);
+                }
                 checkVotingProgress();
             }
         }
@@ -663,19 +673,31 @@
             if (currentPhase !== 'VOTING') return;
 
             const count = currentRoundVotes.length;
-            const connectedTotal = connections.filter(p => p.connected).length;
+            
+            // Logic: We need votes from everyone who is currently connected.
+            // We also count votes from people who disconnected after voting (so the total doesn't drop weirdly).
+            // Total Required = (People who voted) U (People who are connected)
+            
+            const votedNames = new Set(currentRoundVotes.map(v => v.name));
+            const connectedNames = connections.filter(p => p.connected).map(p => p.name);
+            
+            // Union of sets
+            const unionSet = new Set([...votedNames, ...connectedNames]);
+            const totalRequired = unionSet.size;
             
             const vrc = document.getElementById('votes-received-count');
             if(vrc) vrc.innerText = count;
             const tpc = document.getElementById('total-players-count');
-            if(tpc) tpc.innerText = connectedTotal;
+            if(tpc) tpc.innerText = totalRequired;
             
-            if (count >= connectedTotal) {
+            // Enable finish if we have as many votes as the required total
+            // (Since we prevent duplicates, count == votedNames.size)
+            if (count >= totalRequired) {
                 document.getElementById('finish-round-btn').disabled = false;
                 document.getElementById('host-status-msg').innerText = "¡Todos los conectados han votado!";
             } else {
                 document.getElementById('finish-round-btn').disabled = true;
-                document.getElementById('host-status-msg').innerText = `Esperando a ${connectedTotal - count} jugadores...`;
+                document.getElementById('host-status-msg').innerText = `Esperando a ${totalRequired - count} jugadores...`;
             }
         }
 
@@ -689,7 +711,7 @@
 
         function startGame() {
             if (connections.length < 1) {
-                alert("¡Se necesita al menos 1 jugador para probar!");
+                alert("¡Se necesita al menos 1 jugador para empezar!");
                 return; 
             }
             currentPhase = 'WHEEL';
@@ -994,7 +1016,11 @@
             html += `</div>`;
 
             document.getElementById('leaderboard-container').innerHTML = html;
+            lastLeaderboardHtml = html;
             showScreen('game-over');
+            
+            // Broadcast to players
+            broadcast({ type: 'LEADERBOARD', html: html });
         }
 
 
@@ -1147,6 +1173,9 @@
                 // alert(data.message); // Alert is annoying, maybe just text on screen
             } else if (data.type === 'ROUND_END') {
                 showScreen('player-wait');
+            } else if (data.type === 'LEADERBOARD') {
+                document.getElementById('leaderboard-container').innerHTML = data.html;
+                showScreen('game-over');
             } else if (data.type === 'RESULT') {
                 // Legacy result handler, replaced by REVEAL_AND_RATE flow
                 document.getElementById('result-title').innerText = data.title;
