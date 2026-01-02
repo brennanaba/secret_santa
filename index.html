@@ -579,7 +579,9 @@
 
                 peer.on('open', (id) => {
                     document.getElementById('room-code-display').innerText = id;
-                    const joinUrl = `https://brennanaba.github.io/secret_santa/?room=${id}`;
+                    // This automatically grabs the current URL of wherever you hosted it
+                    const currentUrl = window.location.href.split('?')[0]; 
+                    const joinUrl = `${currentUrl}?room=${id}`;
                     new QRCode(document.getElementById("qrcode"), {
                         text: joinUrl,
                         width: 128,
@@ -674,16 +676,11 @@
 
             const count = currentRoundVotes.length;
             
-            // Logic: We need votes from everyone who is currently connected.
-            // We also count votes from people who disconnected after voting (so the total doesn't drop weirdly).
-            // Total Required = (People who voted) U (People who are connected)
+            // Logic: We need votes from ALL players who started the game.
+            // We use the 'players' roster which is fixed at startGame.
+            // This ensures we wait for disconnected players to reconnect and vote.
             
-            const votedNames = new Set(currentRoundVotes.map(v => v.name));
-            const connectedNames = connections.filter(p => p.connected).map(p => p.name);
-            
-            // Union of sets
-            const unionSet = new Set([...votedNames, ...connectedNames]);
-            const totalRequired = unionSet.size;
+            const totalRequired = players.length;
             
             const vrc = document.getElementById('votes-received-count');
             if(vrc) vrc.innerText = count;
@@ -691,10 +688,9 @@
             if(tpc) tpc.innerText = totalRequired;
             
             // Enable finish if we have as many votes as the required total
-            // (Since we prevent duplicates, count == votedNames.size)
             if (count >= totalRequired) {
                 document.getElementById('finish-round-btn').disabled = false;
-                document.getElementById('host-status-msg').innerText = "¡Todos los conectados han votado!";
+                document.getElementById('host-status-msg').innerText = "¡Todos han votado!";
             } else {
                 document.getElementById('finish-round-btn').disabled = true;
                 document.getElementById('host-status-msg').innerText = `Esperando a ${totalRequired - count} jugadores...`;
@@ -856,11 +852,10 @@
             currentPhase = 'VOTING';
             currentRoundVotes = [];
             
-            // document.getElementById('vote-count').innerText = "0";
             const vrc = document.getElementById('votes-received-count');
             if(vrc) vrc.innerText = "0";
             const tpc = document.getElementById('total-players-count');
-            if(tpc) tpc.innerText = connections.filter(p => p.connected).length;
+            if(tpc) tpc.innerText = players.length;
 
             document.getElementById('target-name').innerText = target;
             document.getElementById('finish-round-btn').disabled = true;
@@ -878,43 +873,81 @@
         }
 
         function broadcast(msg) {
-            connections.forEach(p => p.conn.send(msg));
+            connections.forEach(p => {
+                if (p.connected && p.conn && p.conn.open) {
+                    try {
+                        p.conn.send(msg);
+                    } catch (e) {
+                        console.error("Broadcast error to " + p.name, e);
+                    }
+                }
+            });
         }
 
-        function finishRound() {
-            // Find the Real Giver
+function finishRound() {
+            // 1. Identify the Real Giver
+            // We look for who checked the "It was me" box among the submitted votes
             const givers = currentRoundVotes.filter(v => v.isGiver);
             let realGiver = "Desconocido";
             
             if (givers.length === 1) {
                 realGiver = givers[0].name;
             } else if (givers.length > 1) {
-                // Conflict!
-                alert(`¡Conflicto! ${givers.length} personas dicen que regalaron: ${givers.map(g=>g.name).join(', ')}. Se usará el primero.`);
+                alert(`¡Conflicto! Varios dijeron ser el regalador: ${givers.map(g=>g.name).join(', ')}. Se usará el primero.`);
                 realGiver = givers[0].name;
             } else {
-                // No one claimed it
-                alert("¡Nadie dijo 'Fui yo'! Se registrará como Desconocido.");
+                // If nobody claimed it (giver fell asleep), we check if the Host wants to proceed anyway
+                if(!confirm("¡Nadie marcó 'Fui yo'! ¿Seguro que quieres finalizar? El regalador constará como 'Desconocido'.")) {
+                    return; // Abort finish
+                }
             }
 
-            // Calculate Average Ratings for this round
-            // Filter out the giver's own rating? Usually yes.
+            // 2. Calculate Fair Score (The "Average" Fix)
+            // Filter: remove the giver (they can't rate themselves) AND remove anyone who claimed to be giver to be safe
+            // IMPORTANT: We only average the votes that actually exist. We do NOT count missing people as '0'.
             const validRatings = currentRoundVotes.filter(v => v.name !== realGiver);
             
             let avgOrig = 0, avgFit = 0, avgEff = 0;
+            
             if (validRatings.length > 0) {
-                avgOrig = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.orig), 0) / validRatings.length;
-                avgFit = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.fit), 0) / validRatings.length;
-                avgEff = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.eff), 0) / validRatings.length;
+                avgOrig = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.orig || 0), 0) / validRatings.length;
+                avgFit = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.fit || 0), 0) / validRatings.length;
+                avgEff = validRatings.reduce((sum, v) => sum + parseInt(v.ratings.eff || 0), 0) / validRatings.length;
             }
             
             const totalRoundScore = avgOrig + avgFit + avgEff;
             
-            // Store Round Data
+            // 3. Handle The Sleepers (The "Guessing Penalty" Fix)
+            // We need a complete record of the round. 
+            // Any player (except the target) who is NOT in currentRoundVotes is marked as having guessed WRONG (null).
+            
+            // Create a copy of votes to modify
+            let finalRoundVotes = [...currentRoundVotes];
+            
+            players.forEach(pName => {
+                // Skip the person who received the gift (Target) - they don't vote
+                if (pName === currentTarget) return;
+
+                // Check if this player is already in the votes list
+                const hasVoted = finalRoundVotes.some(v => v.name === pName);
+                
+                if (!hasVoted) {
+                    // THEY SLEPT! Add a penalty entry.
+                    finalRoundVotes.push({
+                        name: pName,
+                        guess: null, // Null guess = Automatic wrong answer
+                        ratings: { orig: 0, fit: 0, eff: 0 },
+                        isGiver: false,
+                        didNotVote: true // Flag for debugging/display if needed
+                    });
+                }
+            });
+
+            // 4. Save History
             gameHistory.push({
                 target: currentTarget,
                 giver: realGiver,
-                votes: [...currentRoundVotes], // Copy array
+                votes: finalRoundVotes, 
                 scores: {
                     orig: avgOrig,
                     fit: avgFit,
@@ -923,12 +956,9 @@
                 }
             });
 
-            // Remove current target from remaining players
+            // 5. Cleanup & Broadcast
             remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
-
-            // Broadcast Round End (Just go back to wait)
             broadcast({ type: 'ROUND_END' });
-
             nextRound();
         }
 
