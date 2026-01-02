@@ -859,8 +859,10 @@
             if(tpc) tpc.innerText = players.length;
 
             document.getElementById('target-name').innerText = target;
-            document.getElementById('finish-round-btn').disabled = true;
-            document.getElementById('host-status-msg').innerText = "Esperando votos...";
+            
+            // Enable immediately to allow force finish
+            document.getElementById('finish-round-btn').disabled = false;
+            document.getElementById('host-status-msg').innerText = "Esperando votos... (Puedes finalizar forzosamente)";
             
             // Broadcast to players
             broadcast({ 
@@ -898,8 +900,19 @@ function finishRound() {
                 realGiver = givers[0].name;
             } else {
                 // If nobody claimed it (giver fell asleep), we check if the Host wants to proceed anyway
-                if(!confirm("¡Nadie marcó 'Fui yo'! ¿Seguro que quieres finalizar? El regalador constará como 'Desconocido'.")) {
-                    return; // Abort finish
+                let manualName = prompt("¡Nadie marcó 'Fui yo'! \n\nSi sabes quién fue, escribe su nombre EXACTO para que cuenten los puntos.\nSi no, déjalo vacío (nadie sumará puntos de detective).");
+                
+                if (manualName && manualName.trim().length > 0) {
+                    const found = players.find(p => p.toLowerCase() === manualName.trim().toLowerCase());
+                    if (found) {
+                        realGiver = found;
+                    } else {
+                        alert(`El nombre '${manualName}' no coincide con ningún jugador. Se usará 'Desconocido'.`);
+                    }
+                } else {
+                    if(!confirm("¿Seguro que quieres finalizar con regalador 'Desconocido'?")) {
+                        return; // Abort finish
+                    }
                 }
             }
 
