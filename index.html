@@ -607,12 +607,15 @@
                     
                     // Sync State
                     if (currentPhase === 'VOTING') {
-                         c.send({ 
-                            type: 'VOTE_START', 
-                            target: currentTarget, 
-                            challenge: currentChallenge,
-                            candidates: players.filter(p => p !== currentTarget) 
-                        });
+                        const hasVoted = currentRoundVotes.some(v => v.name === existingPlayer.name);
+                        if (!hasVoted) {
+                             c.send({ 
+                                type: 'VOTE_START', 
+                                target: currentTarget, 
+                                challenge: currentChallenge,
+                                candidates: players.filter(p => p !== currentTarget) 
+                            });
+                        }
                     } else {
                         c.send({ type: 'ROUND_END' }); 
                     }
