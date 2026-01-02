@@ -687,14 +687,15 @@
             const tpc = document.getElementById('total-players-count');
             if(tpc) tpc.innerText = totalRequired;
             
-            // Enable finish if we have as many votes as the required total
+            // Update status message
             if (count >= totalRequired) {
-                document.getElementById('finish-round-btn').disabled = false;
                 document.getElementById('host-status-msg').innerText = "¡Todos han votado!";
             } else {
-                document.getElementById('finish-round-btn').disabled = true;
-                document.getElementById('host-status-msg').innerText = `Esperando a ${totalRequired - count} jugadores...`;
+                document.getElementById('host-status-msg').innerText = `Esperando a ${totalRequired - count} jugadores... (Puedes finalizar forzosamente)`;
             }
+            
+            // Always enable the button so the host can force finish if needed (to handle Sleepers)
+            document.getElementById('finish-round-btn').disabled = false;
         }
 
         function updatePlayerList() {
