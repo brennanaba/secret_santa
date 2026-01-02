@@ -113,9 +113,13 @@
 
         /* Specific Screen Styles */
         #role-selection {
-            display: flex;
+            /* display: flex; Removed to allow .screen class to hide it */
             flex-direction: column;
             gap: 20px;
+        }
+
+        #role-selection.active {
+            display: flex;
         }
 
         .big-btn {
