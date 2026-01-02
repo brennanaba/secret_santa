@@ -628,10 +628,26 @@
                     guess: data.guess,
                     ratings: data.ratings,
                     isGiver: data.isGiver
-        function updatePlayerList() {
-            const list = document.getElementById('player-list');
-            list.innerHTML = connections.map(p => {
-                const status = p.connected ? '🟢' : '🔴';
+                });
+                checkVotingProgress();
+            }
+        }
+
+        function checkVotingProgress() {
+            if (currentPhase !== 'VOTING') return;
+
+        function startGame() {
+            if (connections.length < 1) {
+                alert("¡Se necesita al menos 1 jugador para probar!");
+                return; 
+            }
+            currentPhase = 'WHEEL';
+            players = connections.map(p => p.name);
+            remainingPlayers = [...players];
+            showScreen('host-wheel');
+            drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
+            drawWheel('wheel-canvas-actions', challenges, rotationActions);
+        }       const status = p.connected ? '🟢' : '🔴';
                 return `<li>${status} ${p.name}</li>`;
             }).join('');
         }
