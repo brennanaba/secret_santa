@@ -262,15 +262,11 @@
             height: 220px;
             transition: transform 0.3s;
         }
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 1.3rem;
-            }
 
-            .container {
-                width: 95%;
-                padding: 1rem;
-            }adding: 15px; 
+        .giver-container {
+            margin-bottom: 15px; 
+            background: rgba(0,0,0,0.03); 
+            padding: 15px; 
             border-radius: 4px;
             display: flex;
             justify-content: center; /* Center the checkbox group */
@@ -290,7 +286,15 @@
              color: var(--rustic-red) !important;
         }
 
+        .giver-label span {
+             color: var(--rustic-red) !important;
+        }
+
         @media (max-width: 600px) {
+            h1 {
+                font-size: 1.3rem;
+            }
+
             .container {
                 width: 95%;
                 padding: 1rem;
@@ -317,11 +321,7 @@
             }
         }
 
-    </style>
-</head>
-<body>
-
-    <div class="container">
+    </style>ss="container">
         <!-- Role Selection -->
         <div id="role-selection" class="screen">
             <h1>🎅 Fiesta del Amigo Invisible 🎄</h1>
@@ -503,9 +503,10 @@
         // --- GLOBAL STATE ---
         let peer = null;
         let conn = null; // For player
-        let connections = []; // For host: list of { conn, name, score }
+        let connections = []; // For host: list of { conn, name, score, connected }
         let myName = "";
         let isHost = false;
+        let currentPhase = 'LOBBY'; // LOBBY, WHEEL, VOTING, LEADERBOARD
         
         // Game State
         let players = []; // List of names
@@ -526,7 +527,7 @@
             { title: "Codos", desc: "Intenta rasgar el papel solo con los codos." },
             { title: "Cantando", desc: "Canta un villancico mientras abres." },
             { title: "Cámara Lenta", desc: "Abre en cámara lenta dramática." },
-            { title: "El Oscar", desc: "Da un discurso de aceptación llorando." },
+            { title: "El Oscar", desc: "Da un discurso de aceptación." },
             { title: "Efectos Sonido", desc: "Haz efectos de sonido para cada movimiento." },
             { title: "Noche de Paz", desc: "Abre sin hacer ni un solo ruido." },
             { title: "Mayordomo", desc: "Elige a otro para que lo abra por ti." },
@@ -575,27 +576,50 @@
                 });
                 showScreen('host-lobby');
             });
-
             peer.on('connection', (c) => {
                 c.on('open', () => {
                     // Wait for JOIN message
                     c.on('data', (data) => handleHostData(c, data));
                 });
                 c.on('close', () => {
-                    connections = connections.filter(p => p.conn !== c);
-                    updatePlayerList();
+                    const p = connections.find(x => x.conn === c);
+                    if (p) {
+                        p.connected = false;
+                        updatePlayerList();
+                        checkVotingProgress();
+                    }
                 });
             });
         }
 
         function handleHostData(c, data) {
             if (data.type === 'JOIN') {
-                const newPlayer = { conn: c, name: data.name, score: 0 };
-                connections.push(newPlayer);
+                let existingPlayer = connections.find(p => p.name === data.name);
+                
+                if (existingPlayer) {
+                    // Reconnection
+                    existingPlayer.conn = c;
+                    existingPlayer.connected = true;
+                    c.send({ type: 'JOIN_CONFIRM' });
+                    
+                    // Sync State
+                    if (currentPhase === 'VOTING') {
+                         c.send({ 
+                            type: 'VOTE_START', 
+                            target: currentTarget, 
+                            challenge: currentChallenge,
+                            candidates: players.filter(p => p !== currentTarget) 
+                        });
+                    } else {
+                        c.send({ type: 'ROUND_END' }); 
+                    }
+                } else {
+                    // New Player
+                    const newPlayer = { conn: c, name: data.name, score: 0, connected: true };
+                    connections.push(newPlayer);
+                    c.send({ type: 'JOIN_CONFIRM' });
+                }
                 updatePlayerList();
-                // Send current player list to everyone so they know who is in game? 
-                // Ideally we just confirm join.
-                c.send({ type: 'JOIN_CONFIRM' });
             } else if (data.type === 'VOTE_AND_RATE') {
                 // Check if player already voted (update if so, or just push)
                 // Simple implementation: just push
@@ -604,23 +628,34 @@
                     guess: data.guess,
                     ratings: data.ratings,
                     isGiver: data.isGiver
-                });
-                
-                const count = currentRoundVotes.length;
-                const total = connections.length;
-                // document.getElementById('vote-count').innerText = count;
-                const vrc = document.getElementById('votes-received-count');
-                if(vrc) vrc.innerText = count;
-                const tpc = document.getElementById('total-players-count');
-                if(tpc) tpc.innerText = total;
-                
-                if (count >= total) {
-                    document.getElementById('finish-round-btn').disabled = false;
-                    document.getElementById('host-status-msg').innerText = "¡Todos han votado!";
-                } else {
-                    document.getElementById('host-status-msg').innerText = `Esperando a ${total - count} jugadores...`;
-                }
+        function updatePlayerList() {
+            const list = document.getElementById('player-list');
+            list.innerHTML = connections.map(p => {
+                const status = p.connected ? '🟢' : '🔴';
+                return `<li>${status} ${p.name}</li>`;
+            }).join('');
+        }
+
+        function startGame() {
+            if (connections.length < 1) {
+                alert("¡Se necesita al menos 1 jugador para probar!");
+                return; 
             }
+            currentPhase = 'WHEEL';
+            players = connections.map(p => p.name);
+            const vrc = document.getElementById('votes-received-count');
+            if(vrc) vrc.innerText = count;
+            const tpc = document.getElementById('total-players-count');
+            if(tpc) tpc.innerText = connectedTotal;
+            
+            if (count >= connectedTotal) {
+                document.getElementById('finish-round-btn').disabled = false;
+                document.getElementById('host-status-msg').innerText = "¡Todos los conectados han votado!";
+            } else {
+                document.getElementById('finish-round-btn').disabled = true;
+                document.getElementById('host-status-msg').innerText = `Esperando a ${connectedTotal - count} jugadores...`;
+            }
+        }   }
         }
 
         function getPlayerName(c) {
@@ -736,16 +771,17 @@
                      }, 1000);
                  }
              }
-        }
-
-        function spinSingleWheel(canvasId, segments, startRotation, forceAngle, forceDuration, callback) {
-            const spinAngle = forceAngle || (Math.random() * 10 + 10); 
-            const duration = forceDuration || (4000 + Math.random() * 1000); 
-            let start = null;
+        function startVotingRound(target, challenge) {
+            currentPhase = 'VOTING';
+            currentRoundVotes = [];
             
-            function animate(time) {
-                if (!start) start = time;
-                const elapsed = time - start;
+            // document.getElementById('vote-count').innerText = "0";
+            const vrc = document.getElementById('votes-received-count');
+            if(vrc) vrc.innerText = "0";
+            const tpc = document.getElementById('total-players-count');
+            if(tpc) tpc.innerText = connections.filter(p => p.connected).length;
+
+            document.getElementById('target-name').innerText = target;
                 
                 if (elapsed < duration) {
                     let t = elapsed / duration;
@@ -838,11 +874,6 @@
                     eff: avgEff,
                     total: totalRoundScore
                 }
-            });
-
-            // Remove player from wheel
-            remainingPlayers = remainingPlayers.filter(p => p !== currentTarget);
-            
             // Broadcast Round End (Just go back to wait)
             broadcast({ type: 'ROUND_END' });
 
@@ -853,10 +884,17 @@
             if (remainingPlayers.length === 0) {
                 showLeaderboard();
             } else {
+                currentPhase = 'WHEEL';
                 document.getElementById('spin-btn').disabled = false;
                 showScreen('host-wheel');
                 drawWheel('wheel-canvas-names', remainingPlayers, rotationNames);
                 drawWheel('wheel-canvas-actions', challenges, rotationActions);
+            }
+        }
+
+        function showLeaderboard() {
+            currentPhase = 'LEADERBOARD';
+            // 1. Calculate Best Givers-actions', challenges, rotationActions);
             }
         }
 
