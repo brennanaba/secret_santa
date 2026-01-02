@@ -900,7 +900,18 @@ function finishRound() {
                 realGiver = givers[0].name;
             } else {
                 // If nobody claimed it (giver fell asleep), we check if the Host wants to proceed anyway
-                let manualName = prompt("¡Nadie marcó 'Fui yo'! \n\nSi sabes quién fue, escribe su nombre EXACTO para que cuenten los puntos.\nSi no, déjalo vacío (nadie sumará puntos de detective).");
+                
+                // Helper: Find who hasn't voted to suggest them
+                const votedNames = currentRoundVotes.map(v => v.name);
+                const missingVoters = players.filter(p => p !== currentTarget && !votedNames.includes(p));
+                
+                let promptMsg = "¡Nadie marcó 'Fui yo' (El regalador no votó)!\n\n";
+                if (missingVoters.length > 0) {
+                    promptMsg += "Posibles candidatos (no han votado): " + missingVoters.join(', ') + "\n\n";
+                }
+                promptMsg += "Si sabes quién fue, escribe su nombre EXACTO para asignar los puntos.\nSi no, déjalo vacío (nadie sumará puntos de detective).";
+
+                let manualName = prompt(promptMsg);
                 
                 if (manualName && manualName.trim().length > 0) {
                     const found = players.find(p => p.toLowerCase() === manualName.trim().toLowerCase());
