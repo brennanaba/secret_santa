@@ -95,6 +95,28 @@
         button.accent { background-color: var(--primary); }
         button.danger { background-color: #e03131; }
 
+        /* Language Button */
+        #btn-lang {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            z-index: 2000;
+            font-family: 'Fredoka', sans-serif;
+            width: auto;
+            margin: 0;
+            max-width: none;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+        #btn-lang:hover { background: rgba(0,0,0,0.6); }
+
         /* --- Inputs --- */
         input[type="text"], select {
             padding: 15px;
@@ -340,60 +362,63 @@
 </head>
 <body>
 
+    <!-- Language Toggle -->
+    <button id="btn-lang" onclick="app.toggleLanguage()">🇪🇸 ES</button>
+
     <!-- Toast Container -->
     <div id="toast-container"></div>
     <div id="connection-status" title="Estado de Conexión"></div>
 
     <div class="container">
-        <div id="reconnect-msg" class="reconnect-badge">⚠️ Conexión perdida. Reconectando...</div>
+        <div id="reconnect-msg" class="reconnect-badge" data-i18n="reconnect_msg">⚠️ Conexión perdida. Reconectando...</div>
 
         <!-- SCREEN: ROLE SELECTION -->
         <div id="screen-role" class="screen active">
-            <h1>🎅 Fiesta Amigo Invisible</h1>
-            <p>¡Bienvenido! ¿Qué quieres hacer?</p>
-            <button class="accent" onclick="app.initHost()">Crear Nueva Partida</button>
-            <button class="secondary" onclick="app.showJoinScreen()">Unirse a Partida</button>
+            <h1 data-i18n="title">🎅 Fiesta Amigo Invisible</h1>
+            <p data-i18n="welcome">¡Bienvenido! ¿Qué quieres hacer?</p>
+            <button class="accent" onclick="app.initHost()" data-i18n="btn_create">Crear Nueva Partida</button>
+            <button class="secondary" onclick="app.showJoinScreen()" data-i18n="btn_join">Unirse a Partida</button>
             
             <div id="resume-game-btn-container" style="display:none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-                <p style="font-size: 0.9rem; color: #666;">Se encontró una partida interrumpida:</p>
-                <button class="secondary" style="background-color: var(--accent); color: #333;" onclick="app.resumeHost()">🔄 Reanudar como Anfitrión</button>
+                <p style="font-size: 0.9rem; color: #666;" data-i18n="found_game">Se encontró una partida interrumpida:</p>
+                <button class="secondary" style="background-color: var(--accent); color: #333;" onclick="app.resumeHost()" data-i18n="btn_resume">🔄 Reanudar como Anfitrión</button>
             </div>
 
             <div style="margin-top:20px; font-size: 0.8rem; color: #aaa;">
-                <p>v0.2</p>
+                <p data-i18n="footer">v0.4</p>
             </div>
         </div>
 
         <!-- SCREEN: HOST LOBBY -->
         <div id="screen-host-lobby" class="screen">
-            <h2>Sala de Espera</h2>
-            <p>Escanea para unirte:</p>
+            <h2 data-i18n="lobby_title">Sala de Espera</h2>
+            <p data-i18n="scan_join">Escanea para unirte:</p>
             <div id="qrcode" style="display:inline-block; margin: 10px; padding:10px; background:white;"></div>
-            <p>O usa el código:</p>
+            <p data-i18n="or_code">O usa el código:</p>
             <div id="host-room-code" class="code-display">...</div>
             
             <div style="text-align: left; margin-top: 20px;">
-                <h3>Jugadores (<span id="player-count">0</span>)</h3>
+                <h3><span data-i18n="players_list">Jugadores</span> (<span id="player-count">0</span>)</h3>
                 <ul id="player-list"></ul>
             </div>
             
-            <button class="accent" onclick="app.startGame()">¡Comenzar Juego!</button>
-            <button class="danger" onclick="app.resetGameData()" style="font-size: 0.8rem; padding: 10px;">Borrar Datos y Salir</button>
+            <button class="accent" onclick="app.startGame()" data-i18n="btn_start">¡Comenzar Juego!</button>
+            <button class="danger" onclick="app.resetGameData()" data-i18n="btn_clear">Borrar Datos y Salir</button>
         </div>
 
         <!-- SCREEN: WHEEL (Shared for Host & Player View) -->
         <div id="screen-wheel" class="screen">
-            <h2>🎁 ¡Sorteo!</h2>
+            <h2 data-i18n="wheel_title">🎁 ¡Sorteo!</h2>
             <div class="wheels-wrapper">
                 <div class="wheel-column">
-                    <h3>¿Quién abre?</h3>
+                    <h3 data-i18n="wheel_who">¿Quién abre?</h3>
                     <div class="wheel-container">
                         <div class="wheel-pointer"></div>
                         <canvas id="canvas-wheel-names" width="500" height="500"></canvas>
                     </div>
                 </div>
                 <div class="wheel-column">
-                    <h3>El Desafío</h3>
+                    <h3 data-i18n="wheel_task">El Desafío</h3>
                     <div class="wheel-container">
                         <div class="wheel-pointer"></div>
                         <canvas id="canvas-wheel-actions" width="500" height="500"></canvas>
@@ -402,73 +427,73 @@
             </div>
             
             <div id="host-controls-wheel" style="display:none;">
-                <button class="accent" id="btn-spin" onclick="app.spinWheels()">¡GIRAR!</button>
+                <button class="accent" id="btn-spin" onclick="app.spinWheels()" data-i18n="btn_spin">¡GIRAR!</button>
             </div>
             <div id="player-controls-wheel" style="display:none;">
-                <p>El anfitrión está girando la ruleta...</p>
+                <p data-i18n="host_spinning">El anfitrión está girando la ruleta...</p>
             </div>
         </div>
 
         <!-- SCREEN: SCORING (Host View) -->
         <div id="screen-host-scoring" class="screen">
-            <h2>🗳️ Votación en Curso</h2>
+            <h2 data-i18n="voting_title">🗳️ Votación en Curso</h2>
             <div style="background: #e7f5ff; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                 <h3 style="margin:0; color:#1971c2" id="target-display-name">Target</h3>
-                <p style="margin:5px 0 0 0">está abriendo su regalo.</p>
+                <p style="margin:5px 0 0 0" data-i18n="opening_gift">está abriendo su regalo.</p>
             </div>
             
-            <p>Esperando que los jugadores voten...</p>
+            <p data-i18n="waiting_votes">Esperando que los jugadores voten...</p>
             <div style="font-size: 2.5rem; font-weight: bold; color: var(--secondary);">
                 <span id="votes-current">0</span> / <span id="votes-total">0</span>
             </div>
             
-            <button id="btn-finish-round" class="secondary" onclick="app.finishRound()" disabled>Finalizar Ronda</button>
+            <button id="btn-finish-round" class="secondary" onclick="app.finishRound()" disabled data-i18n="btn_finish">Finalizar Ronda</button>
         </div>
 
         <!-- SCREEN: JOIN -->
         <div id="screen-join" class="screen">
-            <h2>Unirse a la Fiesta</h2>
-            <input type="text" id="inp-name" placeholder="Tu Nombre (Ej. Juan)" maxlength="12">
-            <input type="text" id="inp-code" placeholder="Código de Sala" style="text-transform: uppercase;">
-            <button class="accent" onclick="app.joinGame()">Entrar</button>
-            <button class="secondary" onclick="app.showRoleScreen()">Atrás</button>
+            <h2 data-i18n="join_title">Unirse a la Fiesta</h2>
+            <input type="text" id="inp-name" placeholder="Tu Nombre (Ej. Juan)" maxlength="12" data-i18n-ph="ph_name">
+            <input type="text" id="inp-code" placeholder="Código de Sala" style="text-transform: uppercase;" data-i18n-ph="ph_code">
+            <button class="accent" onclick="app.joinGame()" data-i18n="btn_enter">Entrar</button>
+            <button class="secondary" onclick="app.showRoleScreen()" data-i18n="btn_back">Atrás</button>
         </div>
 
         <!-- SCREEN: WAITING (Player) -->
         <div id="screen-wait" class="screen">
-            <h2>⏳ Esperando...</h2>
-            <p id="wait-msg">El anfitrión está organizando la siguiente ronda.</p>
+            <h2 data-i18n="wait_title">⏳ Esperando...</h2>
+            <p id="wait-msg" data-i18n="wait_msg">El anfitrión está organizando la siguiente ronda.</p>
             <div style="font-size: 3rem; animation: bounce 2s infinite;">🎁</div>
         </div>
 
         <!-- SCREEN: VOTING (Player) -->
         <div id="screen-vote" class="screen">
-            <h2>🗳️ ¡A Votar!</h2>
+            <h2 data-i18n="vote_screen_title">🗳️ ¡A Votar!</h2>
             
             <div style="background:#fff3bf; padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #fcc419;">
-                <strong>Objetivo:</strong> Adivina quién le regaló a <span id="vote-target-name" style="color:var(--primary); font-weight:bold;"></span>
+                <strong><span data-i18n="vote_obj">Objetivo:</span></strong> <span data-i18n="vote_obj_desc">Adivina quién le regaló a</span> <span id="vote-target-name" style="color:var(--primary); font-weight:bold;"></span>
             </div>
 
             <!-- Giver Checkbox -->
             <div id="container-is-giver" class="giver-check-container">
                 <input type="checkbox" id="check-is-giver" onchange="app.toggleGuessState(this)">
                 <div>
-                    <span style="font-weight:bold; color:var(--primary); display:block;">¡Fui yo! 🙋‍♂️</span>
-                    <span style="font-size:0.8rem;">Marca esto si TÚ compraste este regalo.</span>
+                    <span style="font-weight:bold; color:var(--primary); display:block;" data-i18n="is_me">¡Fui yo! 🙋‍♂️</span>
+                    <span style="font-size:0.8rem;" data-i18n="is_me_desc">Marca esto si TÚ compraste este regalo.</span>
                 </div>
             </div>
 
             <div id="container-guess">
-                <h3>¿Quién crees que fue?</h3>
+                <h3 data-i18n="who_guess">¿Quién crees que fue?</h3>
                 <select id="sel-guess">
-                    <option value="" disabled selected>Elige un jugador...</option>
+                    <option value="" disabled selected data-i18n="sel_default">Elige un jugador...</option>
                 </select>
             </div>
 
-            <h3>Puntúa el Regalo</h3>
+            <h3 data-i18n="rate_title">Puntúa el Regalo</h3>
             
             <div class="rating-group">
-                <div class="rating-title">Originalidad</div>
+                <div class="rating-title" data-i18n="rate_orig">Originalidad</div>
                 <div class="stars" id="stars-orig">
                     <input type="radio" id="o5" name="orig" value="5"><label for="o5">★</label>
                     <input type="radio" id="o4" name="orig" value="4"><label for="o4">★</label>
@@ -479,7 +504,7 @@
             </div>
 
             <div class="rating-group">
-                <div class="rating-title">Adecuación (¿Le pega?)</div>
+                <div class="rating-title" data-i18n="rate_fit">Adecuación (¿Le pega?)</div>
                 <div class="stars" id="stars-fit">
                     <input type="radio" id="f5" name="fit" value="5"><label for="f5">★</label>
                     <input type="radio" id="f4" name="fit" value="4"><label for="f4">★</label>
@@ -490,7 +515,7 @@
             </div>
 
             <div class="rating-group">
-                <div class="rating-title">Esfuerzo</div>
+                <div class="rating-title" data-i18n="rate_eff">Esfuerzo</div>
                 <div class="stars" id="stars-eff">
                     <input type="radio" id="e5" name="eff" value="5"><label for="e5">★</label>
                     <input type="radio" id="e4" name="eff" value="4"><label for="e4">★</label>
@@ -500,14 +525,14 @@
                 </div>
             </div>
 
-            <button class="accent" onclick="app.submitVote()">Enviar Voto</button>
+            <button class="accent" onclick="app.submitVote()" data-i18n="btn_submit_vote">Enviar Voto</button>
         </div>
 
         <!-- SCREEN: LEADERBOARD -->
         <div id="screen-leaderboard" class="screen">
-            <h1>🏆 Resultados Finales</h1>
+            <h1 data-i18n="lb_title">🏆 Resultados Finales</h1>
             <div id="lb-content"></div>
-            <button class="secondary" onclick="app.resetGameData()">Nueva Partida</button>
+            <button class="secondary" onclick="app.resetGameData()" data-i18n="btn_new_game">Nueva Partida</button>
         </div>
 
     </div>
@@ -553,6 +578,156 @@
     </script>
 
     <script>
+        // --- TRANSLATIONS ---
+        const dictionary = {
+            es: {
+                "title": "🎅 Fiesta Amigo Invisible",
+                "welcome": "¡Bienvenido! ¿Qué quieres hacer?",
+                "btn_create": "Crear Nueva Partida",
+                "btn_join": "Unirse a Partida",
+                "btn_resume": "🔄 Reanudar como Anfitrión",
+                "found_game": "Se encontró una partida interrumpida:",
+                "footer": "v2.3 - Multilenguaje",
+                "lobby_title": "Sala de Espera",
+                "scan_join": "Escanea para unirte:",
+                "or_code": "O usa el código:",
+                "players_list": "Jugadores",
+                "btn_start": "¡Comenzar Juego!",
+                "btn_clear": "Borrar Datos y Salir",
+                "wheel_title": "🎁 ¡Sorteo!",
+                "wheel_who": "¿Quién abre?",
+                "wheel_task": "El Desafío",
+                "host_spinning": "El anfitrión está girando la ruleta...",
+                "btn_spin": "¡GIRAR!",
+                "voting_title": "🗳️ Votación en Curso",
+                "opening_gift": "está abriendo su regalo.",
+                "waiting_votes": "Esperando que los jugadores voten...",
+                "btn_finish": "Finalizar Ronda",
+                "join_title": "Unirse a la Fiesta",
+                "ph_name": "Tu Nombre (Ej. Juan)",
+                "ph_code": "Código de Sala",
+                "btn_enter": "Entrar",
+                "btn_back": "Atrás",
+                "wait_title": "⏳ Esperando...",
+                "wait_msg": "El anfitrión está organizando la siguiente ronda.",
+                "vote_screen_title": "🗳️ ¡A Votar!",
+                "vote_obj": "Objetivo:",
+                "vote_obj_desc": "Adivina quién le regaló a",
+                "is_me": "¡Fui yo! 🙋‍♂️",
+                "is_me_desc": "Marca esto si TÚ compraste este regalo.",
+                "who_guess": "¿Quién crees que fue?",
+                "sel_default": "Elige un jugador...",
+                "rate_title": "Puntúa el Regalo",
+                "rate_orig": "Originalidad",
+                "rate_fit": "Adecuación (¿Le pega?)",
+                "rate_eff": "Esfuerzo",
+                "btn_submit_vote": "Enviar Voto",
+                "lb_title": "🏆 Resultados Finales",
+                "btn_new_game": "Nueva Partida",
+                "lb_best_giver": "🎁 Mejor Regalador",
+                "lb_best_det": "🕵️ Mejor Detective",
+                "th_pos": "Pos",
+                "th_name": "Nombre",
+                "th_pts": "Pts",
+                "th_hits": "Aciertos",
+                "reconnect_msg": "⚠️ Conexión perdida. Reconectando...",
+                // JS Strings
+                "js_toast_min_players": "Se necesitan min. 2 jugadores",
+                "js_toast_connected": "se unió.",
+                "js_toast_reconnected": "se reconectó.",
+                "js_toast_all_voted": "¡Todos han votado!",
+                "js_prompt_conflict": "Conflicto: Varios dijeron ser regaladores",
+                "js_prompt_who": "¿Quién fue realmente?",
+                "js_prompt_nobody": "Nadie marcó 'Fui yo'. Escribe el nombre del regalador:",
+                "js_toast_missing_data": "Faltan datos",
+                "js_toast_guess_needed": "Debes adivinar quién fue.",
+                "js_toast_rate_all": "Por favor, valora todos los aspectos.",
+                "js_vote_sent": "Voto enviado. Esperando resultados..."
+            },
+            en: {
+                "title": "🎅 Secret Santa Party",
+                "welcome": "Welcome! What would you like to do?",
+                "btn_create": "Create New Game",
+                "btn_join": "Join Game",
+                "btn_resume": "🔄 Resume as Host",
+                "found_game": "Interrupted game found:",
+                "footer": "v2.3 - Multi-language",
+                "lobby_title": "Lobby",
+                "scan_join": "Scan to join:",
+                "or_code": "Or use code:",
+                "players_list": "Players",
+                "btn_start": "Start Game!",
+                "btn_clear": "Clear Data & Exit",
+                "wheel_title": "🎁 Draw!",
+                "wheel_who": "Who opens?",
+                "wheel_task": "The Challenge",
+                "host_spinning": "Host is spinning the wheel...",
+                "btn_spin": "SPIN!",
+                "voting_title": "🗳️ Voting in Progress",
+                "opening_gift": "is opening their gift.",
+                "waiting_votes": "Waiting for players to vote...",
+                "btn_finish": "Finish Round",
+                "join_title": "Join the Party",
+                "ph_name": "Your Name (e.g. John)",
+                "ph_code": "Room Code",
+                "btn_enter": "Enter",
+                "btn_back": "Back",
+                "wait_title": "⏳ Waiting...",
+                "wait_msg": "Host is organizing the next round.",
+                "vote_screen_title": "🗳️ Vote Time!",
+                "vote_obj": "Goal:",
+                "vote_obj_desc": "Guess who gave a gift to",
+                "is_me": "It was me! 🙋‍♂️",
+                "is_me_desc": "Check this if YOU bought this gift.",
+                "who_guess": "Who do you think it was?",
+                "sel_default": "Choose a player...",
+                "rate_title": "Rate the Gift",
+                "rate_orig": "Originality",
+                "rate_fit": "Suitability",
+                "rate_eff": "Effort",
+                "btn_submit_vote": "Submit Vote",
+                "lb_title": "🏆 Final Results",
+                "btn_new_game": "New Game",
+                "lb_best_giver": "🎁 Best Giver",
+                "lb_best_det": "🕵️ Best Detective",
+                "th_pos": "Pos",
+                "th_name": "Name",
+                "th_pts": "Pts",
+                "th_hits": "Hits",
+                "reconnect_msg": "⚠️ Connection lost. Reconnecting...",
+                // JS Strings
+                "js_toast_min_players": "Min. 2 players required",
+                "js_toast_connected": "joined.",
+                "js_toast_reconnected": "reconnected.",
+                "js_toast_all_voted": "Everyone has voted!",
+                "js_prompt_conflict": "Conflict: Multiple people claimed the gift",
+                "js_prompt_who": "Who was it really?",
+                "js_prompt_nobody": "Nobody marked 'It was me'. Enter giver's name:",
+                "js_toast_missing_data": "Missing data",
+                "js_toast_guess_needed": "You must guess who it was.",
+                "js_toast_rate_all": "Please rate all aspects.",
+                "js_vote_sent": "Vote sent. Waiting for results..."
+            }
+        };
+
+        const challengesES = [
+            "Clásico (Normal)", "Speed Run (Rápido)", "Manoplas de Cocina", 
+            "Brazos T-Rex", "Una Mano", "Sin Pulgares", 
+            "La Garra (Meñique+Anular)", "Con los Codos", "Cantando Villancico", 
+            "Cámara Lenta", "Discurso Oscar", "Efectos de Sonido", 
+            "Noche de Paz (Silencio)", "Mayordomo (Otro abre)", "Titiritero", 
+            "Adivino (Adivina antes)", "Ojos Vendados"
+        ];
+        
+        const challengesEN = [
+            "Classic (Normal)", "Speed Run (Fast)", "Oven Mitts", 
+            "T-Rex Arms", "One Hand", "No Thumbs", 
+            "The Claw (Pinky+Ring)", "Using Elbows", "Singing a Carol", 
+            "Slow Motion", "Oscar Speech", "Sound Effects", 
+            "Silent Night (Silence)", "Butler (Someone else)", "Puppeteer", 
+            "Psychic (Guess first)", "Blindfolded"
+        ];
+
         // --- APP LOGIC ---
         const app = {
             peer: null,
@@ -562,6 +737,7 @@
             players: [], // Names
             remainingPlayers: [],
             reconnectTimer: null,
+            lang: 'es', // Default
             
             // State
             gameState: {
@@ -572,20 +748,24 @@
                 gameHistory: []
             },
             
-            // Config
-            challenges: [
-                "Clásico (Normal)", "Speed Run (Rápido)", "Manoplas de Cocina", 
-                "Brazos T-Rex", "Una Mano", "Sin Pulgares", 
-                "La Garra (Meñique+Anular)", "Con los Codos", "Cantando Villancico", 
-                "Cámara Lenta", "Discurso Oscar", "Efectos de Sonido", 
-                "Noche de Paz (Silencio)", "Mayordomo (Otro abre)", "Titiritero", 
-                "Adivino (Adivina antes)", "Ojos Vendados"
-            ],
+            // Current challenges list
+            challenges: [],
             
             init: () => {
                 // Wake Lock
                 if ('wakeLock' in navigator) {
                     navigator.wakeLock.request('screen').catch(e => console.log('Wake Lock err', e));
+                }
+
+                // Language Init
+                const savedLang = localStorage.getItem('ss_lang');
+                if (savedLang) {
+                    app.setLanguage(savedLang);
+                } else {
+                    // Detect browser lang
+                    const browserLang = navigator.language || navigator.userLanguage; 
+                    if (browserLang.startsWith('en')) app.setLanguage('en');
+                    else app.setLanguage('es');
                 }
 
                 // Check URL for room (Player Join Link)
@@ -611,6 +791,52 @@
                 if (savedHostId && !room) {
                     document.getElementById('resume-game-btn-container').style.display = 'block';
                 }
+            },
+
+            // --- LANGUAGE FUNCTIONS ---
+            toggleLanguage: () => {
+                const newLang = app.lang === 'es' ? 'en' : 'es';
+                app.setLanguage(newLang);
+            },
+
+            setLanguage: (lang) => {
+                app.lang = lang;
+                localStorage.setItem('ss_lang', lang);
+                
+                // Button Text
+                const btn = document.getElementById('btn-lang');
+                btn.innerText = lang === 'es' ? '🇪🇸 ES' : '🇬🇧 EN';
+
+                // Challenges
+                app.challenges = lang === 'es' ? challengesES : challengesEN;
+
+                // UI Text
+                const elements = document.querySelectorAll('[data-i18n]');
+                elements.forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (dictionary[lang][key]) {
+                        el.innerText = dictionary[lang][key];
+                    }
+                });
+
+                // Placeholders
+                const inputs = document.querySelectorAll('[data-i18n-ph]');
+                inputs.forEach(el => {
+                    const key = el.getAttribute('data-i18n-ph');
+                    if (dictionary[lang][key]) {
+                        el.placeholder = dictionary[lang][key];
+                    }
+                });
+
+                // Redraw wheels if visible (to update text)
+                if (app.gameState.phase === 'WHEEL') {
+                    wheel.draw('canvas-wheel-names', app.remainingPlayers.length > 0 ? app.remainingPlayers : ['...'], 0);
+                    wheel.draw('canvas-wheel-actions', app.challenges, 0);
+                }
+            },
+
+            t: (key) => {
+                return dictionary[app.lang][key] || key;
             },
 
             showScreen: (id) => {
@@ -786,7 +1012,7 @@
                         };
                         conn.send(syncData);
                         
-                        app.toast(`${name} se reconectó.`);
+                        app.toast(`${name} ${app.t('js_toast_reconnected')}`);
                     } else {
                         if (app.gameState.phase !== 'LOBBY') {
                             conn.send({ type: 'ERROR', msg: 'Juego ya iniciado.' });
@@ -794,7 +1020,7 @@
                         }
                         app.connections.push({ conn, name, active: true, score: 0, correctGuesses: 0 });
                         conn.send({ type: 'JOIN_OK', phase: 'LOBBY' });
-                        app.toast(`${name} se unió.`);
+                        app.toast(`${name} ${app.t('js_toast_connected')}`);
                         app.saveHostData();
                     }
                     app.updateHostUI();
@@ -817,7 +1043,7 @@
                     
                     if (voteCount >= required) {
                         document.getElementById('btn-finish-round').disabled = false;
-                        app.toast("¡Todos han votado!");
+                        app.toast(app.t('js_toast_all_voted'));
                     }
                 }
             },
@@ -843,7 +1069,7 @@
 
             startGame: () => {
                 if (app.connections.length < 2) {
-                    app.toast("Se necesitan min. 2 jugadores", "error");
+                    app.toast(app.t('js_toast_min_players'), "error");
                     return;
                 }
                 app.players = app.connections.map(p => p.name);
@@ -864,6 +1090,10 @@
                 app.broadcast({ type: 'PHASE_WHEEL' });
                 
                 app.showScreen('screen-wheel');
+                
+                // Re-enable spin button for next round
+                document.getElementById('btn-spin').disabled = false;
+                
                 document.getElementById('host-controls-wheel').style.display = 'block';
                 document.getElementById('player-controls-wheel').style.display = 'none';
                 
@@ -879,6 +1109,10 @@
                 // Spin Logic
                 const namesResult = wheel.spin('canvas-wheel-names', app.remainingPlayers, dur);
                 const actionResult = wheel.spin('canvas-wheel-actions', app.challenges, dur);
+                
+                // Trigger local Host animation (Fix for blank screen bug)
+                wheel.spinTo('canvas-wheel-names', app.remainingPlayers, namesResult.params, dur);
+                wheel.spinTo('canvas-wheel-actions', app.challenges, actionResult.params, dur);
                 
                 // Broadcast Spin Animation
                 app.broadcast({ 
@@ -929,9 +1163,9 @@
                 
                 if (givers.length === 1) realGiver = givers[0].name;
                 else if (givers.length > 1) {
-                    realGiver = prompt(`Conflicto: Varios dijeron ser regaladores (${givers.map(g=>g.name).join(',')}). ¿Quién fue realmente?`) || givers[0].name;
+                    realGiver = prompt(`${app.t('js_prompt_conflict')} (${givers.map(g=>g.name).join(',')}). ${app.t('js_prompt_who')}`) || givers[0].name;
                 } else {
-                    realGiver = prompt("Nadie marcó 'Fui yo'. Escribe el nombre del regalador:") || "Desconocido";
+                    realGiver = prompt(app.t('js_prompt_nobody')) || "Desconocido";
                 }
 
                 // Calculate Scores
@@ -980,15 +1214,15 @@
                 const sortedDetectives = [...app.connections].sort((a,b) => b.correctGuesses - a.correctGuesses);
                 
                 let html = `
-                    <h3>🎁 Mejor Regalador</h3>
+                    <h3>${app.t('lb_best_giver')}</h3>
                     <table class="lb-table">
-                        <tr><th>Pos</th><th>Nombre</th><th>Pts</th></tr>
+                        <tr><th>${app.t('th_pos')}</th><th>${app.t('th_name')}</th><th>${app.t('th_pts')}</th></tr>
                         ${sortedScore.map((p, i) => `<tr><td>#${i+1}</td><td>${p.name}</td><td>${p.score.toFixed(1)}</td></tr>`).join('')}
                     </table>
                     
-                    <h3>🕵️ Mejor Detective</h3>
+                    <h3>${app.t('lb_best_det')}</h3>
                     <table class="lb-table">
-                        <tr><th>Pos</th><th>Nombre</th><th>Aciertos</th></tr>
+                        <tr><th>${app.t('th_pos')}</th><th>${app.t('th_name')}</th><th>${app.t('th_hits')}</th></tr>
                         ${sortedDetectives.map((p, i) => `<tr><td>#${i+1}</td><td>${p.name}</td><td>${p.correctGuesses}</td></tr>`).join('')}
                     </table>
                 `;
@@ -1012,7 +1246,7 @@
             joinGame: (isRetry = false) => {
                 const name = document.getElementById('inp-name').value;
                 const code = document.getElementById('inp-code').value;
-                if (!name || !code) return app.toast("Faltan datos", "error");
+                if (!name || !code) return app.toast(app.t('js_toast_missing_data'), "error");
 
                 if(!isRetry) app.isHost = false;
                 localStorage.setItem('ss_name', name);
@@ -1077,12 +1311,21 @@
                     app.showScreen('screen-wheel');
                     document.getElementById('host-controls-wheel').style.display = 'none';
                     document.getElementById('player-controls-wheel').style.display = 'block';
+                    
+                    // Redraw in case we missed a language update trigger
+                    wheel.draw('canvas-wheel-names', ['?'], 0);
+                    wheel.draw('canvas-wheel-actions', app.challenges, 0);
                 }
                 else if (data.type === 'SPIN_ANIM') {
                     // Replicate spin locally
                     app.showScreen('screen-wheel');
                     wheel.spinTo('canvas-wheel-names', data.names, data.targetParams, data.duration);
-                    wheel.spinTo('canvas-wheel-actions', data.challenges, data.actionParams, data.duration);
+                    // We use local text for challenges if we can match length? 
+                    // Actually, for sync, we should probably stick to what the Host sent for visuals,
+                    // BUT user requested Translation. 
+                    // Challenge: If English host sends "T-Rex Arms", Spanish client wheel shows "T-Rex Arms" (English).
+                    // Fix: Use local `app.challenges` for the wheel text so it matches user preference.
+                    wheel.spinTo('canvas-wheel-actions', app.challenges, data.actionParams, data.duration);
                 }
                 else if (data.type === 'PHASE_VOTE') {
                     app.showScreen('screen-vote');
@@ -1103,7 +1346,7 @@
 
                     // Populate List (exclude target)
                     const sel = document.getElementById('sel-guess');
-                    sel.innerHTML = '<option value="" disabled selected>Elige un jugador...</option>';
+                    sel.innerHTML = `<option value="" disabled selected>${app.t('sel_default')}</option>`;
                     data.candidates.forEach(c => {
                         if (c !== data.target && c !== myName) {
                             const opt = document.createElement('option');
@@ -1114,6 +1357,9 @@
                     });
                 }
                 else if (data.type === 'PHASE_END') {
+                    // Note: This HTML is generated by Host. It will be in Host's language.
+                    // To fully translate, we'd need to send raw data and render locally.
+                    // For now, we display what Host sent.
                     document.getElementById('lb-content').innerHTML = data.html;
                     app.showScreen('screen-leaderboard');
                 }
@@ -1135,7 +1381,7 @@
                 const guess = document.getElementById('sel-guess').value;
                 
                 // Validate
-                if (!isGiver && !guess) return app.toast("Debes adivinar quién fue.", "error");
+                if (!isGiver && !guess) return app.toast(app.t('js_toast_guess_needed'), "error");
                 
                 const getStars = (id) => {
                     const el = document.querySelector(`#${id} input:checked`);
@@ -1149,7 +1395,7 @@
                 };
 
                 if (ratings.o == 0 || ratings.f == 0 || ratings.e == 0) {
-                    return app.toast("Por favor, valora todos los aspectos.", "error");
+                    return app.toast(app.t('js_toast_rate_all'), "error");
                 }
 
                 const myName = document.getElementById('inp-name').value;
@@ -1163,7 +1409,7 @@
                 });
 
                 app.showScreen('screen-wait');
-                document.getElementById('wait-msg').innerText = "Voto enviado. Esperando resultados...";
+                document.getElementById('wait-msg').innerText = app.t('js_vote_sent');
             }
         };
 
@@ -1172,6 +1418,9 @@
             colors: ['#c92a2a', '#2b8a3e', '#fcc419', '#343a40'],
             
             draw: (canvasId, items, rotation) => {
+                // Fix: prevent crash if items is empty
+                if (!items || items.length === 0) return;
+
                 const canvas = document.getElementById(canvasId);
                 const ctx = canvas.getContext('2d');
                 const [w, h] = [canvas.width, canvas.height];
