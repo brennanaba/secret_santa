@@ -215,7 +215,8 @@
             filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
         }
 
-        canvas {
+        /* Scoped to wheel-container to avoid affecting confetti canvas */
+        .wheel-container canvas {
             width: 100%;
             height: 100%;
             border-radius: 50%;
@@ -385,7 +386,7 @@
             </div>
 
             <div style="margin-top:20px; font-size: 0.8rem; color: #aaa;">
-                <p data-i18n="footer">v0.4</p>
+                <p data-i18n="footer">v2.5 - Fixes</p>
             </div>
         </div>
 
@@ -587,7 +588,7 @@
                 "btn_join": "Unirse a Partida",
                 "btn_resume": "🔄 Reanudar como Anfitrión",
                 "found_game": "Se encontró una partida interrumpida:",
-                "footer": "v2.3 - Multilenguaje",
+                "footer": "v0.4",
                 "lobby_title": "Sala de Espera",
                 "scan_join": "Escanea para unirte:",
                 "or_code": "O usa el código:",
@@ -651,7 +652,7 @@
                 "btn_join": "Join Game",
                 "btn_resume": "🔄 Resume as Host",
                 "found_game": "Interrupted game found:",
-                "footer": "v2.3 - Multi-language",
+                "footer": "v0.4",
                 "lobby_title": "Lobby",
                 "scan_join": "Scan to join:",
                 "or_code": "Or use code:",
@@ -1002,13 +1003,17 @@
                         existing.conn = conn; // Update connection
                         existing.active = true;
                         
+                        // Check if they voted
+                        const hasVoted = app.gameState.votes.some(v => v.name === name);
+
                         // Send current state for syncing
                         const syncData = {
                             type: 'JOIN_OK',
                             phase: app.gameState.phase,
                             target: app.gameState.target,
                             challenge: app.gameState.challenge,
-                            candidates: app.players
+                            candidates: app.players,
+                            hasVoted: hasVoted
                         };
                         conn.send(syncData);
                         
@@ -1300,7 +1305,12 @@
                 if (data.type === 'JOIN_OK') {
                     // Host accepted us.
                     if (data.phase === 'VOTING') {
-                        app.handleDataPlayer({ type: 'PHASE_VOTE', target: data.target, candidates: data.candidates });
+                        if (data.hasVoted) {
+                             app.showScreen('screen-wait');
+                             document.getElementById('wait-msg').innerText = app.t('js_vote_sent');
+                        } else {
+                             app.handleDataPlayer({ type: 'PHASE_VOTE', target: data.target, candidates: data.candidates });
+                        }
                     } else if (data.phase === 'WHEEL') {
                         app.handleDataPlayer({ type: 'PHASE_WHEEL' });
                     } else {
@@ -1498,7 +1508,7 @@
                         const step = (2 * Math.PI) / items.length;
                         const currentSegment = Math.floor(currentAngle / step);
                         if(currentSegment > lastTick) {
-                            Sound.playTick();
+                            // Sound.playTick(); // REMOVED PER USER REQUEST
                             lastTick = currentSegment;
                         }
 
